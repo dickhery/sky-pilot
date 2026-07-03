@@ -34,7 +34,7 @@ const PHASES: Phase[] = [
     details: [
       "Hold Shift to spool the throttle up — watch the airspeed indicator climb past rotation speed.",
       "Keep the wings level with A / D as the plane accelerates down the centreline.",
-      "Pull back on S (or ↓) to rotate — lift the nose smoothly off the runway.",
+      "Pull back on W (or ↑) to rotate — lift the nose smoothly off the runway.",
       "Once airborne, ease the nose down slightly to build speed before climbing out.",
     ],
   },
@@ -58,7 +58,7 @@ const PHASES: Phase[] = [
     details: [
       "Line up with the runway centreline early — small roll corrections, no sudden banks.",
       "Reduce throttle with Ctrl to descend; aim for a steady glide path.",
-      "Flare just before touchdown by easing back on S to soften the contact.",
+      "Flare just before touchdown by pulling up gently on W to soften the contact.",
       "Touch down on the main gear first, then lower the nose — apply Space to brake.",
     ],
   },

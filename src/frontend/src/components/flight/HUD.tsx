@@ -1,5 +1,8 @@
+import type { LandingHint } from "@/components/flight/flightPhysics";
 import type { FlightPhase } from "@/types/game";
 import {
+  CheckCircle2,
+  Circle,
   Compass,
   Gauge,
   Keyboard,
@@ -15,20 +18,29 @@ interface HUDProps {
   verticalSpeed: number;
   airborne: boolean;
   phase: FlightPhase;
+  missionStep: number;
   objective: string;
+  subObjective?: string;
+  landingHint: LandingHint;
   nextWaypoint: { name: string; distance: number; bearing: number } | null;
   throttlePct: number;
   brakesOn: boolean;
 }
 
-/**
- * Cockpit Noir HUD overlay.
- *
- * Telemetry uses JetBrains Mono via `font-mono` and the `hud-label` utility.
- * The four primary instruments (altitude, airspeed, heading, objective) sit
- * in glow-instrument panels; a compact controls reference lives bottom-right.
- * The whole overlay is pointer-events-none so it never blocks the canvas.
- */
+const MISSION_STEPS = [
+  { phase: "takeoff", label: "Take off" },
+  { phase: "cruising", label: "Waypoint" },
+  { phase: "landing", label: "Approach" },
+  { phase: "rollout", label: "Land" },
+] as const;
+
+const HINT_MESSAGES: Record<NonNullable<LandingHint>, string> = {
+  wrong_runway: "Wrong runway — fly to the landing runway (offset right)",
+  off_corridor: "Missed runway — go around and try the approach again",
+  too_fast: "Too fast — reduce throttle (Ctrl) before touchdown",
+  brake_to_finish: "Touchdown! Hold Space to brake below 20 kt to finish",
+};
+
 export function HUD({
   altitude,
   airspeed,
@@ -36,7 +48,10 @@ export function HUD({
   verticalSpeed,
   airborne,
   phase,
+  missionStep,
   objective,
+  subObjective,
+  landingHint,
   nextWaypoint,
   throttlePct,
   brakesOn,
@@ -45,7 +60,8 @@ export function HUD({
     idle: "Standby",
     takeoff: "Takeoff",
     cruising: "Cruise",
-    landing: "Landing",
+    landing: "Approach",
+    rollout: "Rollout",
     complete: "Complete",
   };
 
@@ -55,31 +71,81 @@ export function HUD({
 
   return (
     <div className="pointer-events-none absolute inset-0 z-20 select-none font-mono text-primary">
-      {/* Top-center: phase + objective banner */}
-      <div className="absolute left-1/2 top-4 flex -translate-x-1/2 flex-col items-center gap-1">
+      {/* Top-center: mission progress + objective */}
+      <div className="absolute left-1/2 top-4 flex -translate-x-1/2 flex-col items-center gap-1.5">
         <div
-          className="hud-scanlines glow-instrument flex items-center gap-2 rounded-md border border-primary/40 bg-card/80 px-4 py-1.5 backdrop-blur"
-          data-ocid="flight.hud.phase"
+          className="hud-scanlines glow-instrument flex items-center gap-3 rounded-md border border-primary/40 bg-card/80 px-4 py-1.5 backdrop-blur"
+          data-ocid="flight.hud.mission"
         >
-          <span className="hud-label text-[10px] text-muted-foreground">
-            Phase
-          </span>
-          <span className="hud-label text-xs font-bold text-primary">
-            {phaseLabel[phase]}
-          </span>
+          {MISSION_STEPS.map((step, i) => {
+            const stepNum = i + 1;
+            const done = missionStep > stepNum;
+            const active =
+              missionStep === stepNum ||
+              (phase === "complete" && stepNum === 4);
+            return (
+              <div key={step.phase} className="flex items-center gap-1">
+                {done ? (
+                  <CheckCircle2
+                    className="h-3 w-3 text-primary"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <Circle
+                    className={`h-3 w-3 ${active ? "text-accent" : "text-muted-foreground/50"}`}
+                    aria-hidden="true"
+                  />
+                )}
+                <span
+                  className={`hud-label text-[9px] ${active ? "font-bold text-accent" : done ? "text-primary" : "text-muted-foreground"}`}
+                >
+                  {step.label}
+                </span>
+                {i < MISSION_STEPS.length - 1 && (
+                  <span className="mx-0.5 text-muted-foreground/40">›</span>
+                )}
+              </div>
+            );
+          })}
         </div>
+
         <div
-          className="hud-scanlines flex items-center gap-2 rounded-md border border-accent/40 bg-card/70 px-4 py-1 backdrop-blur"
+          className="hud-scanlines flex flex-col items-center gap-0.5 rounded-md border border-accent/40 bg-card/70 px-4 py-1.5 backdrop-blur"
           data-ocid="flight.hud.objective"
         >
-          <Navigation className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
-          <span className="hud-label text-[11px] text-accent-foreground text-accent">
-            {objective}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="hud-label text-[10px] text-muted-foreground">
+              {phaseLabel[phase]}
+            </span>
+            <Navigation
+              className="h-3.5 w-3.5 text-accent"
+              aria-hidden="true"
+            />
+            <span className="hud-label text-[11px] font-bold text-accent">
+              {objective}
+            </span>
+          </div>
+          {subObjective && (
+            <span className="hud-label text-[10px] text-muted-foreground">
+              {subObjective}
+            </span>
+          )}
         </div>
+
+        {landingHint && (
+          <div className="glow-caution hud-scanlines flex items-center gap-1.5 rounded-md border border-accent/50 bg-accent/15 px-3 py-1.5 backdrop-blur">
+            <TriangleAlert
+              className="h-3.5 w-3.5 shrink-0 text-accent"
+              aria-hidden="true"
+            />
+            <span className="hud-label text-[10px] text-accent">
+              {HINT_MESSAGES[landingHint]}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Top-left: altitude + airspeed stack */}
+      {/* Top-left: instruments */}
       <div className="absolute left-4 top-4 flex flex-col gap-2">
         <Instrument
           icon={<Mountain className="h-4 w-4" aria-hidden="true" />}
@@ -122,6 +188,17 @@ export function HUD({
             </span>
           </div>
         )}
+        {phase === "landing" && airborne && airspeed > 85 && (
+          <div className="glow-caution hud-scanlines flex items-center gap-1.5 rounded-md border border-accent/50 bg-accent/15 px-2.5 py-1.5 backdrop-blur">
+            <TriangleAlert
+              className="h-3.5 w-3.5 text-accent"
+              aria-hidden="true"
+            />
+            <span className="hud-label text-[10px] text-accent">
+              Slow to 65 kt (Ctrl) before landing
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Top-right: throttle + brakes */}
@@ -159,7 +236,7 @@ export function HUD({
         )}
       </div>
 
-      {/* Bottom-center: next waypoint guidance */}
+      {/* Bottom-center: navigation */}
       {nextWaypoint && (
         <div
           className="hud-scanlines glow-instrument absolute bottom-24 left-1/2 flex -translate-x-1/2 items-center gap-4 rounded-md border border-primary/40 bg-card/80 px-4 py-2 backdrop-blur"
@@ -167,7 +244,9 @@ export function HUD({
         >
           <div className="flex flex-col">
             <span className="hud-label text-[9px] text-muted-foreground">
-              Next Waypoint
+              {phase === "landing" || phase === "rollout"
+                ? "Landing Runway"
+                : "Navigate To"}
             </span>
             <span className="hud-label text-sm font-bold text-primary">
               {nextWaypoint.name}
@@ -197,7 +276,7 @@ export function HUD({
         </div>
       )}
 
-      {/* Bottom-right: compact controls reference */}
+      {/* Bottom-right: controls */}
       <div
         className="hud-scanlines absolute bottom-4 right-4 rounded-md border border-border bg-card/80 p-3 backdrop-blur"
         data-ocid="flight.hud.controls"
@@ -213,13 +292,13 @@ export function HUD({
         </div>
         <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
           <Key>W / S</Key>
-          <span>Pitch</span>
+          <span>Pitch up / down</span>
           <Key>A / D</Key>
-          <span>Roll</span>
+          <span>Turn (bank)</span>
           <Key>Shift</Key>
-          <span>Throttle +</span>
+          <span>More power</span>
           <Key>Ctrl</Key>
-          <span>Throttle −</span>
+          <span>Less power</span>
           <Key>Space</Key>
           <span>Brakes</span>
         </div>

@@ -73,7 +73,9 @@ export function FlightScene({
         end={layout.landingEnd}
         weather={weather}
         isLanding
+        label="LAND"
       />
+      <LandingRunwayMarker position={layout.landingThreshold} />
       <WaypointMarker position={layout.waypoint} />
       <FlightRig
         plane={plane}
@@ -93,11 +95,13 @@ function Runway({
   end,
   weather,
   isLanding = false,
+  label,
 }: {
   start: THREE.Vector3;
   end: THREE.Vector3;
   weather: Weather;
   isLanding?: boolean;
+  label?: string;
 }) {
   const length = start.distanceTo(end);
   const center = start.clone().add(end).multiplyScalar(0.5);
@@ -151,21 +155,66 @@ function Runway({
           />
         </mesh>
       ))}
-      {/* Threshold bars — amber strobes at night for landing runway */}
-      {isLanding && isNight && (
+      {/* Landing threshold — green approach lights (always visible) */}
+      {isLanding && (
         <>
-          <mesh position={[-3, 0.5, -length / 2 + 2]}>
-            <sphereGeometry args={[0.3, 8, 8]} />
-            <meshBasicMaterial color="#e89a3c" />
-            <pointLight color="#e89a3c" intensity={2} distance={20} />
+          <mesh position={[-3.5, 0.4, -length / 2 + 3]}>
+            <boxGeometry args={[0.5, 0.5, 0.5]} />
+            <meshBasicMaterial color="#3dff7a" />
+            <pointLight
+              color="#3dff7a"
+              intensity={isNight ? 2.5 : 1.2}
+              distance={25}
+            />
           </mesh>
-          <mesh position={[3, 0.5, -length / 2 + 2]}>
-            <sphereGeometry args={[0.3, 8, 8]} />
-            <meshBasicMaterial color="#e89a3c" />
-            <pointLight color="#e89a3c" intensity={2} distance={20} />
+          <mesh position={[3.5, 0.4, -length / 2 + 3]}>
+            <boxGeometry args={[0.5, 0.5, 0.5]} />
+            <meshBasicMaterial color="#3dff7a" />
+            <pointLight
+              color="#3dff7a"
+              intensity={isNight ? 2.5 : 1.2}
+              distance={25}
+            />
           </mesh>
         </>
       )}
+      {label && (
+        <mesh
+          position={[0, 0.5, -length / 2 + 8]}
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
+          <planeGeometry args={[6, 1.5]} />
+          <meshBasicMaterial color="#3dff7a" transparent opacity={0.85} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+function LandingRunwayMarker({ position }: { position: THREE.Vector3 }) {
+  const ref = useRef<THREE.Group>(null);
+  useFrame((state) => {
+    if (ref.current) {
+      const pulse = 1 + Math.sin(state.clock.elapsedTime * 3) * 0.15;
+      ref.current.scale.setScalar(pulse);
+    }
+  });
+  return (
+    <group ref={ref} position={[position.x, position.y + 8, position.z]}>
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[10, 12, 32]} />
+        <meshBasicMaterial
+          color="#3dff7a"
+          transparent
+          opacity={0.7}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      <mesh>
+        <coneGeometry args={[0.6, 2.5, 4]} />
+        <meshBasicMaterial color="#3dff7a" />
+      </mesh>
+      <pointLight color="#3dff7a" intensity={1.2} distance={50} />
     </group>
   );
 }

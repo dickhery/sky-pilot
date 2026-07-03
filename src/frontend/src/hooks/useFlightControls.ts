@@ -3,29 +3,19 @@ import { useEffect, useRef, useState } from "react";
 /**
  * Keyboard control state for the flight simulator.
  *
- * Each axis is a normalized -1..1 value so the flight loop can apply it
- * directly to the plane's transform. We poll the live key state on each
- * animation frame via the returned ref so there is no React re-render per
- * frame — only the HUD-relevant summary (throttle %, brakes on/off) is
- * surfaced through React state for the telemetry readout.
+ * Axes are smoothed each animation frame so pitch/roll feel less twitchy.
+ * Throttle ramps like a real lever; brakes bleed speed on the ground.
  */
 export interface ControlAxes {
-  /** Pitch: -1 = nose down (S), 1 = nose up (W). */
   pitch: number;
-  /** Roll / yaw steering: -1 = left (A), 1 = right (D). */
   roll: number;
-  /** Throttle: 0 = idle, 1 = full. Shift increases, Ctrl decreases. */
   throttle: number;
-  /** Brakes active (Space). */
   brakes: boolean;
 }
 
 export interface FlightControls {
-  /** Live axes — read inside the render loop, never triggers re-render. */
   axes: React.MutableRefObject<ControlAxes>;
-  /** Throttle 0..1 for HUD readout. */
   throttlePct: number;
-  /** Brakes engaged flag for HUD readout. */
   brakesOn: boolean;
 }
 
@@ -48,52 +38,62 @@ const KEY_MAP: Record<
   Space: "brakes",
 };
 
-/**
- * Manages keyboard input for flight control. W/S pitch, A/D roll,
- * Shift/Ctrl throttle, Space brakes. Returns a ref of live axes for the
- * render loop plus React state for the HUD telemetry readout.
- */
 export function useFlightControls(): FlightControls {
   const axes = useRef<ControlAxes>({
     pitch: 0,
     roll: 0,
-    throttle: 0.2,
+    throttle: 0.25,
     brakes: false,
   });
   const keys = useRef<Set<string>>(new Set());
-  const [throttlePct, setThrottlePct] = useState(20);
+  const target = useRef({ pitch: 0, roll: 0 });
+  const [throttlePct, setThrottlePct] = useState(25);
   const [brakesOn, setBrakesOn] = useState(false);
 
   useEffect(() => {
-    const recompute = () => {
+    const readTargets = () => {
       const k = keys.current;
-      const pitch =
+      target.current.pitch =
         (k.has("KeyW") || k.has("ArrowUp") ? 1 : 0) +
         (k.has("KeyS") || k.has("ArrowDown") ? -1 : 0);
-      const roll =
+      target.current.roll =
         (k.has("KeyD") || k.has("ArrowRight") ? 1 : 0) +
         (k.has("KeyA") || k.has("ArrowLeft") ? -1 : 0);
-      const brakes = k.has("Space");
-
-      // Throttle ramps toward target so it feels like a real throttle lever.
-      const targetUp = k.has("ShiftLeft") || k.has("ShiftRight");
-      const targetDown = k.has("ControlLeft") || k.has("ControlRight");
-      let throttle = axes.current.throttle;
-      const ramp = 0.028;
-      if (targetUp) throttle = Math.min(1, throttle + ramp);
-      else if (targetDown) throttle = Math.max(0, throttle - ramp);
-      // Brakes bleed throttle when on the ground.
-      if (brakes) throttle = Math.max(0, throttle - ramp * 2);
-
-      axes.current = { pitch, roll, throttle, brakes };
-      setThrottlePct(Math.round(throttle * 100));
-      setBrakesOn(brakes);
+      return k.has("Space");
     };
+
+    let frame = 0;
+    const tick = () => {
+      const brakes = readTargets();
+      const t = target.current;
+      const a = axes.current;
+      const smooth = 0.14;
+
+      a.pitch += (t.pitch - a.pitch) * smooth;
+      a.roll += (t.roll - a.roll) * smooth;
+
+      const ramp = 0.032;
+      const targetUp =
+        keys.current.has("ShiftLeft") || keys.current.has("ShiftRight");
+      const targetDown =
+        keys.current.has("ControlLeft") || keys.current.has("ControlRight");
+      if (targetUp) a.throttle = Math.min(1, a.throttle + ramp);
+      else if (targetDown) a.throttle = Math.max(0, a.throttle - ramp);
+      if (brakes) a.throttle = Math.max(0, a.throttle - ramp * 2.5);
+
+      a.brakes = brakes;
+      a.pitch = Math.abs(a.pitch) < 0.01 ? 0 : a.pitch;
+      a.roll = Math.abs(a.roll) < 0.01 ? 0 : a.roll;
+
+      setThrottlePct(Math.round(a.throttle * 100));
+      setBrakesOn(brakes);
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
 
     const onKeyDown = (e: KeyboardEvent) => {
       const action = KEY_MAP[e.code];
       if (!action) return;
-      // Prevent page scroll on arrow keys / space while flying.
       if (
         e.code === "Space" ||
         e.code.startsWith("Arrow") ||
@@ -102,24 +102,22 @@ export function useFlightControls(): FlightControls {
         e.preventDefault();
       }
       keys.current.add(e.code);
-      recompute();
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
       if (!KEY_MAP[e.code]) return;
       keys.current.delete(e.code);
-      recompute();
     };
 
     const onBlur = () => {
       keys.current.clear();
-      recompute();
     };
 
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
     window.addEventListener("blur", onBlur);
     return () => {
+      cancelAnimationFrame(frame);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onBlur);

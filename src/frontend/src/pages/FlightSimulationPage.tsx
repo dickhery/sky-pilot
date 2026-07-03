@@ -4,9 +4,12 @@ import { HUD } from "@/components/flight/HUD";
 import { ResultsScreen } from "@/components/flight/ResultsScreen";
 import {
   type FlightState,
+  type LandingHint,
   bearing,
   buildSceneLayout,
   computeScore,
+  distanceToLandingThreshold,
+  missionStep,
 } from "@/components/flight/flightPhysics";
 import { Button } from "@/components/ui/button";
 import { useFlightControls } from "@/hooks/useFlightControls";
@@ -68,6 +71,8 @@ export function FlightSimulationPage() {
     touchdown: null,
     finished: false,
     airborne: false,
+    landingHint: null,
+    hasFlown: false,
   });
 
   const [phase, setPhaseState] = useState<FlightPhase>("takeoff");
@@ -77,6 +82,8 @@ export function FlightSimulationPage() {
     heading: 0,
     verticalSpeed: 0,
     airborne: false,
+    landingHint: null as LandingHint,
+    step: 1,
   });
   const [waypointInfo, setWaypointInfo] = useState<{
     name: string;
@@ -114,23 +121,26 @@ export function FlightSimulationPage() {
         heading: THREE.MathUtils.radToDeg(s.rotation.y),
         verticalSpeed: s.verticalSpeed * 196.85,
         airborne: s.airborne,
+        landingHint: s.landingHint,
+        step: missionStep(s.phase),
       });
 
-      // Waypoint guidance depends on phase.
       if (s.phase === "takeoff" || s.phase === "cruising") {
         const target = layout.waypoint;
-        const dist = s.position.distanceTo(target) / 30; // m → nm approx
         setWaypointInfo({
           name: selectedPlan?.waypoint.name ?? "Waypoint",
-          distance: dist,
+          distance: s.position.distanceTo(target) / 1852,
           bearing: bearing(s.position, target),
         });
-      } else if (s.phase === "landing") {
+      } else if (
+        s.phase === "landing" ||
+        s.phase === "rollout" ||
+        s.phase === "complete"
+      ) {
         const target = layout.landingThreshold;
-        const dist = s.position.distanceTo(target) / 30;
         setWaypointInfo({
-          name: "Landing Runway",
-          distance: dist,
+          name: selectedPlan?.landing.name ?? "Landing Runway",
+          distance: distanceToLandingThreshold(s.position, layout) / 1852,
           bearing: bearing(s.position, target),
         });
       } else {
@@ -213,16 +223,12 @@ export function FlightSimulationPage() {
     );
   }
 
-  const objective =
-    phase === "takeoff"
-      ? telemetry.airborne
-        ? "Climb to cruise altitude — fly toward the waypoint"
-        : "Hold Shift for power, then pull up (W) past 55 kt to rotate"
-      : phase === "cruising"
-        ? `Fly to ${selectedPlan.landing.name}`
-        : phase === "landing"
-          ? "Align with runway and descend gently"
-          : "Flight complete";
+  const { objective, subObjective } = getMissionBrief(
+    phase,
+    telemetry.airborne,
+    selectedPlan.waypoint.name,
+    selectedPlan.landing.name,
+  );
 
   const handleRetry = () => {
     flightState.current = {
@@ -235,6 +241,8 @@ export function FlightSimulationPage() {
       touchdown: null,
       finished: false,
       airborne: false,
+      landingHint: null,
+      hasFlown: false,
     };
     setPhaseState("takeoff");
     setPhase("takeoff");
@@ -264,7 +272,10 @@ export function FlightSimulationPage() {
         verticalSpeed={telemetry.verticalSpeed}
         airborne={telemetry.airborne}
         phase={phase}
+        missionStep={telemetry.step}
         objective={objective}
+        subObjective={subObjective}
+        landingHint={telemetry.landingHint}
         nextWaypoint={waypointInfo}
         throttlePct={throttlePct}
         brakesOn={brakesOn}
@@ -281,6 +292,48 @@ export function FlightSimulationPage() {
       )}
     </div>
   );
+}
+
+function getMissionBrief(
+  phase: FlightPhase,
+  airborne: boolean,
+  waypointName: string,
+  landingName: string,
+): { objective: string; subObjective?: string } {
+  switch (phase) {
+    case "takeoff":
+      return airborne
+        ? {
+            objective: `Fly to ${waypointName}`,
+            subObjective: "Follow the cyan marker ahead — climb to ~500 ft",
+          }
+        : {
+            objective: "Take off from the departure runway",
+            subObjective:
+              "Hold Shift for power → at 55 kt pull up (W) to rotate",
+          };
+    case "cruising":
+      return {
+        objective: `Navigate to ${waypointName}`,
+        subObjective: `Then descend toward ${landingName} (runway offset to the right)`,
+      };
+    case "landing":
+      return {
+        objective: `Land on ${landingName}`,
+        subObjective:
+          "Turn right toward the second runway · heading 000° · slow to 65 kt · gentle descent",
+      };
+    case "rollout":
+      return {
+        objective: "Complete the landing rollout",
+        subObjective:
+          "Hold Space to brake below 20 kt — flight finishes automatically",
+      };
+    case "complete":
+      return { objective: "Flight complete" };
+    default:
+      return { objective: "Prepare for departure" };
+  }
 }
 
 const fallbackPlane = {
