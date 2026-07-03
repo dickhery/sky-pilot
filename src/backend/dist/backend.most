@@ -1,0 +1,81 @@
+// Version: 4.0.0
+type AccessControlState__644643789 =
+  {
+    var adminAssigned : Bool;
+    userRoles : Map__246123559<Principal, UserRole__316535459>
+  };
+type Data__552063367<K, V> = {var count : Nat__93962160; kvs : [var ?(K, V)]};
+type FlightLog__734248493 =
+  {
+    completedAt : Int;
+    id : Nat;
+    planName : Text;
+    plane : Plane__345530652;
+    playerId : Principal;
+    score : ScoreBreakdown__338068372;
+    weather : Weather__936411332
+  };
+type FlightLog__841286554 =
+  {
+    completedAt : Int;
+    id : LogId__558811906;
+    planName : Text;
+    plane : Plane__157403377;
+    playerId : PlayerId__710531919;
+    score : ScoreBreakdown__440512806;
+    weather : Weather__759430080
+  };
+type Internal__455405067<K, V> =
+  {children : [var ?Node__279997185<K, V>]; data : Data__552063367<K, V>};
+type Leaf__114713147<K, V> = {data : Data__552063367<K, V>};
+type List__716101829<T> =
+  {
+    var blockIndex : Nat__93962160;
+    var blocks : [var [var ?T]];
+    var elementIndex : Nat__93962160
+  };
+type List__852723865<T> = List__716101829<T>;
+type LogId__558811906 = Nat;
+type Map__190625089<K, V> = Map__719753394<K, V>;
+type Map__246123559<K, V> = Map__190625089<K, V>;
+type Map__719753394<K, V> =
+  {var root : Node__279997185<K, V>; var size : Nat__93962160};
+type Nat__920180692 = Nat;
+type Nat__93962160 = Nat__920180692;
+type NewActor__991022820 =
+  {
+    accessControlState : AccessControlState__644643789;
+    flightLogs : List__852723865<FlightLog__734248493>;
+    nextLogId : {var value : Nat}
+  };
+type Node__279997185<K, V> =
+  {#internal : Internal__455405067<K, V>; #leaf : Leaf__114713147<K, V>};
+type OldActor__50622083 = {};
+type Plane__157403377 = {#cessna; #gulfstream};
+type Plane__345530652 = {#cessna; #gulfstream};
+type PlayerId__710531919 = Principal;
+type ScoreBreakdown__338068372 =
+  {landingSmoothness : Nat; speed : Nat; total : Nat};
+type ScoreBreakdown__440512806 =
+  {landingSmoothness : Nat; speed : Nat; total : Nat};
+type UserRole__316535459 = {#admin; #guest; #user};
+type UserRole__686137147 = {#admin; #guest; #user};
+type Weather__759430080 = {#daytime; #nighttime; #partlyCloudy};
+type Weather__936411332 = {#daytime; #nighttime; #partlyCloudy};
+{
+  "20260702_000000" : (_old : OldActor__50622083) -> NewActor__991022820
+}
+actor  {
+  stable accessControlState :
+    {
+      var adminAssigned : Bool;
+      userRoles : Map__246123559<Principal, UserRole__686137147>
+    };
+  stable flightLogs :
+    {
+      var blockIndex : Nat__93962160;
+      var blocks : [var [var ?FlightLog__841286554]];
+      var elementIndex : Nat__93962160
+    };
+  stable nextLogId : {var value : Nat}
+};

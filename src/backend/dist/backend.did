@@ -1,0 +1,120 @@
+type Weather = 
+ variant {
+   daytime;
+   nighttime;
+   partlyCloudy;
+ };
+type Waypoint = 
+ record {
+   description: text;
+   name: text;
+ };
+type UserRole = 
+ variant {
+   admin;
+   guest;
+   user;
+ };
+type ScoreBreakdown = 
+ record {
+   landingSmoothness: nat;
+   speed: nat;
+   total: nat;
+ };
+type Runway = 
+ record {
+   description: text;
+   name: text;
+ };
+type Result = 
+ variant {
+   err: Error;
+   ok;
+ };
+type PlayerId = principal;
+type Plane__1 = 
+ record {
+   handling: text;
+   id: PlaneId;
+   name: text;
+ };
+type PlaneId = nat;
+type Plane = 
+ variant {
+   cessna;
+   gulfstream;
+ };
+type PlanId = nat;
+type LogId = nat;
+type FlightPlan = 
+ record {
+   departure: Runway;
+   id: PlanId;
+   landing: Runway;
+   name: text;
+   plane: Plane__1;
+   routeDescription: text;
+   waypoint: Waypoint;
+   weather: Weather;
+ };
+type FlightLogView = 
+ record {
+   completedAt: int;
+   id: LogId;
+   planName: text;
+   plane: Plane;
+   playerId: PlayerId;
+   score: ScoreBreakdown;
+   weather: Weather;
+ };
+type FlightLog = 
+ record {
+   completedAt: int;
+   id: LogId;
+   planName: text;
+   plane: Plane;
+   playerId: PlayerId;
+   score: ScoreBreakdown;
+   weather: Weather;
+ };
+type Error = 
+ variant {
+   AmbiguousAttribute: record {
+                         field: text;
+                         sources: vec text;
+                       };
+   FrontendOriginMismatch: record {
+                             expected: vec text;
+                             got: text;
+                           };
+   FrontendOriginsNotConfigured;
+   MalformedCandid;
+   MissingField: text;
+   MixedSsoSources: record {
+                      otherKeys: vec text;
+                      ssoKeys: vec text;
+                    };
+   NoAttributes;
+   Stale: record {ageNs: nat;};
+   UnknownNonce;
+   UntrustedSsoSource: record {domain: text;};
+ };
+service : {
+  __accessControlState: () -> (reserved) query;
+  __flightLogs: (io: opt nat, count: opt nat) -> (vec FlightLog) query;
+  __nextLogId: () -> (reserved) query;
+  _initialize_access_control: () -> ();
+  _internet_identity_sign_in_finish: () -> (Result);
+  _internet_identity_sign_in_start: () -> (blob);
+  assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  getCallerUserRole: () -> (UserRole) query;
+  getFlightLog: (logId: LogId) -> (opt FlightLogView) query;
+  getFlightPlan: (planId: PlanId) -> (opt FlightPlan) query;
+  isCallerAdmin: () -> (bool) query;
+  listFlightLogs: () -> (vec FlightLogView) query;
+  listFlightPlans: () -> (vec FlightPlan) query;
+  listPlanes: () -> (vec Plane__1) query;
+  listWeather: () -> (vec Weather) query;
+  recordFlightLog: (completedAt: int, planName: text, plane: Plane, weather:
+   Weather, score: ScoreBreakdown) -> (FlightLogView);
+}

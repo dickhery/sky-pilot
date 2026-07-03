@@ -1,0 +1,19 @@
+{
+  "overview": "A 3D flight simulator where players pick a flight plan, take off, fly to a guided destination, land, and get scored on speed and landing smoothness.",
+  "features": [
+    "Main menu with Flight Logs, Flight Plans, and Flight School navigation",
+    "Flight Plans level select with Daytime, Nighttime, and Partly Cloudy conditions plus two plane choices",
+    "3D flight simulation with takeoff, guided navigation, and landing phases",
+    "Scoring on flight speed and landing smoothness based on runway alignment",
+    "Flight Logs history page with persisted past flights and score breakdowns",
+    "Flight School with controls reference and how-to-play walkthrough"
+  ],
+  "category": "game",
+  "tags": [
+    "flight-simulator",
+    "3d-game",
+    "aviation",
+    "interactive"
+  ],
+  "last_updated": "2026-07-02T10:09:16.633Z"
+}

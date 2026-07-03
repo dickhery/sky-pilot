@@ -1,0 +1,185 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Font binaries served from /assets/fonts/*.woff2 ─────────────────────── */
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("/assets/fonts/SpaceGrotesk.woff2") format("woff2");
+  font-weight: 300 700;
+  font-display: swap;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Figtree";
+  src: url("/assets/fonts/Figtree.woff2") format("woff2");
+  font-weight: 300 700;
+  font-display: swap;
+  font-style: normal;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/assets/fonts/JetBrainsMono.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+  font-style: normal;
+}
+
+@layer base {
+  :root {
+    /* Daytime-flight light variant — cool off-white sky, cyan horizon, amber sun */
+    --font-display: "Space Grotesk", sans-serif;
+    --font-body: "Figtree", sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
+    --radius: 0.625rem;
+
+    --background: 0.97 0.012 230;
+    --foreground: 0.18 0.02 250;
+    --card: 0.99 0.008 220;
+    --card-foreground: 0.18 0.02 250;
+    --popover: 0.99 0.008 220;
+    --popover-foreground: 0.18 0.02 250;
+
+    --primary: 0.72 0.14 190;
+    --primary-foreground: 0.16 0.03 250;
+
+    --secondary: 0.93 0.018 215;
+    --secondary-foreground: 0.25 0.03 250;
+    --muted: 0.94 0.014 220;
+    --muted-foreground: 0.48 0.025 245;
+
+    --accent: 0.74 0.16 70;
+    --accent-foreground: 0.16 0.04 60;
+
+    --destructive: 0.58 0.22 25;
+    --destructive-foreground: 0.98 0 0;
+
+    --border: 0.88 0.018 220;
+    --input: 0.88 0.018 220;
+    --ring: 0.72 0.14 190;
+
+    --chart-1: 0.72 0.14 190;
+    --chart-2: 0.74 0.16 70;
+    --chart-3: 0.55 0.18 250;
+    --chart-4: 0.78 0.13 150;
+    --chart-5: 0.62 0.2 30;
+
+    --sidebar: 0.96 0.014 225;
+    --sidebar-foreground: 0.18 0.02 250;
+    --sidebar-primary: 0.72 0.14 190;
+    --sidebar-primary-foreground: 0.16 0.03 250;
+    --sidebar-accent: 0.93 0.018 215;
+    --sidebar-accent-foreground: 0.25 0.03 250;
+    --sidebar-border: 0.88 0.018 220;
+    --sidebar-ring: 0.72 0.14 190;
+
+    /* Gradient + elevation tokens shared across themes */
+    --horizon-gradient: linear-gradient(
+      180deg,
+      oklch(0.78 0.13 200) 0%,
+      oklch(0.86 0.08 210) 38%,
+      oklch(0.74 0.16 70) 100%
+    );
+    --instrument-glow: 0 0 0 1px oklch(0.72 0.14 190 / 0.35), 0 0 18px
+      oklch(0.72 0.14 190 / 0.18);
+    --shadow-subtle: 0 1px 2px 0 oklch(0.18 0.02 250 / 0.08);
+  }
+
+  .dark {
+    /* Cockpit Noir — deep midnight blue-black, cyan horizon, sunset amber */
+    --background: 0.145 0.02 250;
+    --foreground: 0.93 0.015 220;
+    --card: 0.185 0.025 250;
+    --card-foreground: 0.93 0.015 220;
+    --popover: 0.21 0.028 250;
+    --popover-foreground: 0.93 0.015 220;
+
+    --primary: 0.75 0.15 190;
+    --primary-foreground: 0.145 0.02 250;
+
+    --secondary: 0.22 0.025 250;
+    --secondary-foreground: 0.85 0.02 220;
+    --muted: 0.21 0.022 250;
+    --muted-foreground: 0.62 0.025 215;
+
+    --accent: 0.72 0.17 70;
+    --accent-foreground: 0.145 0.02 250;
+
+    --destructive: 0.6 0.2 22;
+    --destructive-foreground: 0.98 0 0;
+
+    --border: 0.27 0.025 250;
+    --input: 0.27 0.025 250;
+    --ring: 0.75 0.15 190;
+
+    --chart-1: 0.75 0.15 190;
+    --chart-2: 0.72 0.17 70;
+    --chart-3: 0.55 0.18 250;
+    --chart-4: 0.7 0.16 150;
+    --chart-5: 0.62 0.2 30;
+
+    --sidebar: 0.185 0.025 250;
+    --sidebar-foreground: 0.93 0.015 220;
+    --sidebar-primary: 0.75 0.15 190;
+    --sidebar-primary-foreground: 0.145 0.02 250;
+    --sidebar-accent: 0.22 0.025 250;
+    --sidebar-accent-foreground: 0.85 0.02 220;
+    --sidebar-border: 0.27 0.025 250;
+    --sidebar-ring: 0.75 0.15 190;
+
+    --horizon-gradient: linear-gradient(
+      180deg,
+      oklch(0.12 0.03 255) 0%,
+      oklch(0.18 0.05 250) 45%,
+      oklch(0.72 0.17 70 / 0.55) 100%
+    );
+    --instrument-glow: 0 0 0 1px oklch(0.75 0.15 190 / 0.4), 0 0 22px
+      oklch(0.75 0.15 190 / 0.22);
+    --shadow-subtle: 0 1px 2px 0 oklch(0 0 0 / 0.4);
+  }
+
+  * {
+    @apply border-border;
+  }
+  html {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+}
+
+@layer utilities {
+  .transition-smooth {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  /* Sky-to-ground horizon backdrop for hero / full-bleed sections */
+  .bg-horizon {
+    background-image: var(--horizon-gradient);
+  }
+  /* Subtle CRT scanline overlay for HUD panels */
+  .hud-scanlines {
+    background-image: repeating-linear-gradient(
+      0deg,
+      oklch(0.75 0.15 190 / 0.04) 0px,
+      oklch(0.75 0.15 190 / 0.04) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  }
+  /* Cyan instrument glow ring for active / focused instruments */
+  .glow-instrument {
+    box-shadow: var(--instrument-glow);
+  }
+  /* Amber caution glow for warnings / landing alerts */
+  .glow-caution {
+    box-shadow: 0 0 0 1px oklch(0.72 0.17 70 / 0.4), 0 0 22px
+      oklch(0.72 0.17 70 / 0.22);
+  }
+  /* Monospace HUD label styling */
+  .hud-label {
+    font-family: var(--font-mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+}
