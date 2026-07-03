@@ -12,6 +12,8 @@ interface HUDProps {
   altitude: number;
   airspeed: number;
   heading: number;
+  verticalSpeed: number;
+  airborne: boolean;
   phase: FlightPhase;
   objective: string;
   nextWaypoint: { name: string; distance: number; bearing: number } | null;
@@ -31,6 +33,8 @@ export function HUD({
   altitude,
   airspeed,
   heading,
+  verticalSpeed,
+  airborne,
   phase,
   objective,
   nextWaypoint,
@@ -98,6 +102,26 @@ export function HUD({
           unit=""
           dataOcid="flight.hud.heading"
         />
+        {airborne && (
+          <Instrument
+            icon={<Navigation className="h-4 w-4" aria-hidden="true" />}
+            label="V/S"
+            value={`${verticalSpeed >= 0 ? "+" : ""}${Math.round(verticalSpeed)}`}
+            unit="fpm"
+            dataOcid="flight.hud.vertical_speed"
+          />
+        )}
+        {phase === "takeoff" && !airborne && airspeed >= 45 && (
+          <div className="glow-caution hud-scanlines flex items-center gap-1.5 rounded-md border border-accent/50 bg-accent/15 px-2.5 py-1.5 backdrop-blur">
+            <TriangleAlert
+              className="h-3.5 w-3.5 text-accent"
+              aria-hidden="true"
+            />
+            <span className="hud-label text-[10px] text-accent">
+              Rotate — pull up (W)
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Top-right: throttle + brakes */}

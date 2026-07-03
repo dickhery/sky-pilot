@@ -1,6 +1,14 @@
 import { Environment } from "@/components/flight/Environment";
 import { PlaneModel } from "@/components/flight/PlaneModel";
 import {
+  AirportBuildings,
+  DistantMountains,
+  Fields,
+  Terrain,
+  TreeField,
+  WaterBody,
+} from "@/components/flight/Scenery";
+import {
   type FlightState,
   type SceneLayout,
   buildSceneLayout,
@@ -49,7 +57,12 @@ export function FlightScene({
       camera={{ fov: 60, near: 0.1, far: 1000, position: [0, 6, 50] }}
     >
       <Environment weather={weather} />
-      <Ground />
+      <Terrain />
+      <Fields />
+      <WaterBody />
+      <TreeField />
+      <DistantMountains />
+      <AirportBuildings />
       <Runway
         start={layout.departureStart}
         end={layout.departureEnd}
@@ -74,15 +87,6 @@ export function FlightScene({
 }
 
 // ── Scene pieces ────────────────────────────────────────────────────────────
-
-function Ground() {
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -150]} receiveShadow>
-      <planeGeometry args={[2000, 2000]} />
-      <meshStandardMaterial color="#2a3a2e" roughness={1} metalness={0} />
-    </mesh>
-  );
-}
 
 function Runway({
   start,
@@ -234,21 +238,28 @@ function FlightRig({
 
     // Chase camera — eased follow behind and above the plane.
     const heading = state.rotation.y;
+    const dist = state.airborne ? 11 : 8;
+    const height = state.airborne ? 4.2 : 3;
     const back = new THREE.Vector3(
-      Math.sin(heading) * 9,
+      Math.sin(heading) * dist,
       0,
-      Math.cos(heading) * 9,
+      Math.cos(heading) * dist,
     );
     const target = state.position.clone().add(back);
-    target.y += 3.5;
-    camPos.current.lerp(target, Math.min(1, dt * 2.5));
+    target.y += height;
+    camPos.current.lerp(target, Math.min(1, dt * 2.8));
     camera.position.copy(camPos.current);
-    camera.lookAt(state.position.x, state.position.y + 1, state.position.z);
+    const lookY = state.position.y + (state.airborne ? 0.8 : 0.4);
+    camera.lookAt(state.position.x, lookY, state.position.z);
   });
 
   return (
     <group ref={planeRef}>
-      <PlaneModel planeId={plane.id} throttle={controlsAxes.current.throttle} />
+      <PlaneModel
+        planeId={plane.id}
+        throttle={controlsAxes.current.throttle}
+        airborne={flightState.current.airborne}
+      />
     </group>
   );
 }

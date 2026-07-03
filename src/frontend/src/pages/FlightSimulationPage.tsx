@@ -67,6 +67,7 @@ export function FlightSimulationPage() {
     elapsed: 0,
     touchdown: null,
     finished: false,
+    airborne: false,
   });
 
   const [phase, setPhaseState] = useState<FlightPhase>("takeoff");
@@ -74,6 +75,8 @@ export function FlightSimulationPage() {
     altitude: 0,
     airspeed: 0,
     heading: 0,
+    verticalSpeed: 0,
+    airborne: false,
   });
   const [waypointInfo, setWaypointInfo] = useState<{
     name: string;
@@ -106,9 +109,11 @@ export function FlightSimulationPage() {
     const id = setInterval(() => {
       const s = flightState.current;
       setTelemetry({
-        altitude: s.position.y * 3.28, // m → ft
-        airspeed: s.speed * 1.94, // m/s → kt
+        altitude: Math.max(0, (s.position.y - 1.07) * 3.28),
+        airspeed: s.speed * 1.94,
         heading: THREE.MathUtils.radToDeg(s.rotation.y),
+        verticalSpeed: s.verticalSpeed * 196.85,
+        airborne: s.airborne,
       });
 
       // Waypoint guidance depends on phase.
@@ -210,7 +215,9 @@ export function FlightSimulationPage() {
 
   const objective =
     phase === "takeoff"
-      ? "Accelerate (Shift) and pull up (W) to take off"
+      ? telemetry.airborne
+        ? "Climb to cruise altitude — fly toward the waypoint"
+        : "Hold Shift for power, then pull up (W) past 55 kt to rotate"
       : phase === "cruising"
         ? `Fly to ${selectedPlan.landing.name}`
         : phase === "landing"
@@ -227,6 +234,7 @@ export function FlightSimulationPage() {
       elapsed: 0,
       touchdown: null,
       finished: false,
+      airborne: false,
     };
     setPhaseState("takeoff");
     setPhase("takeoff");
@@ -253,6 +261,8 @@ export function FlightSimulationPage() {
         altitude={telemetry.altitude}
         airspeed={telemetry.airspeed}
         heading={telemetry.heading}
+        verticalSpeed={telemetry.verticalSpeed}
+        airborne={telemetry.airborne}
         phase={phase}
         objective={objective}
         nextWaypoint={waypointInfo}

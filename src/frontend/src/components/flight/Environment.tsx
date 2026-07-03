@@ -26,16 +26,19 @@ export function Environment({ weather }: EnvironmentProps) {
   return (
     <>
       {weather === "Daytime" && (
-        <Sky
-          distance={4500}
-          sunPosition={sunPosition}
-          inclination={0.52}
-          azimuth={0.25}
-          turbidity={6}
-          rayleigh={1.2}
-          mieCoefficient={0.005}
-          mieDirectionalG={0.85}
-        />
+        <>
+          <Sky
+            distance={4500}
+            sunPosition={sunPosition}
+            inclination={0.52}
+            azimuth={0.25}
+            turbidity={4}
+            rayleigh={1.5}
+            mieCoefficient={0.004}
+            mieDirectionalG={0.82}
+          />
+          <fog attach="fog" args={["#b8d4e8", 120, 480]} />
+        </>
       )}
 
       {weather === "Nighttime" && (

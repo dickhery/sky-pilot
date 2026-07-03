@@ -57,11 +57,11 @@ export function useFlightControls(): FlightControls {
   const axes = useRef<ControlAxes>({
     pitch: 0,
     roll: 0,
-    throttle: 0,
+    throttle: 0.2,
     brakes: false,
   });
   const keys = useRef<Set<string>>(new Set());
-  const [throttlePct, setThrottlePct] = useState(0);
+  const [throttlePct, setThrottlePct] = useState(20);
   const [brakesOn, setBrakesOn] = useState(false);
 
   useEffect(() => {
@@ -79,7 +79,7 @@ export function useFlightControls(): FlightControls {
       const targetUp = k.has("ShiftLeft") || k.has("ShiftRight");
       const targetDown = k.has("ControlLeft") || k.has("ControlRight");
       let throttle = axes.current.throttle;
-      const ramp = 0.012;
+      const ramp = 0.028;
       if (targetUp) throttle = Math.min(1, throttle + ramp);
       else if (targetDown) throttle = Math.max(0, throttle - ramp);
       // Brakes bleed throttle when on the ground.

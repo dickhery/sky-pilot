@@ -1,161 +1,267 @@
 import type { PlaneId } from "@/types/game";
-import { forwardRef, useMemo } from "react";
+import { useFrame } from "@react-three/fiber";
+import { forwardRef, useMemo, useRef } from "react";
 import type * as THREE from "three";
 
 interface PlaneModelProps {
   planeId: PlaneId;
-  /** 0..1 — used to tint the exhaust glow when at full throttle. */
+  /** 0..1 — drives propeller speed and exhaust glow. */
   throttle?: number;
+  /** True when wheels are off the ground. */
+  airborne?: boolean;
 }
 
 /**
- * A lightweight procedural aircraft built from primitives.
+ * Procedural single-engine aircraft built from primitives.
  *
- * Two visual variants keyed by `planeId`:
- *  - CessnaSkyhawk: high-wing trainer, white + cyan livery, wider wingspan.
- *  - Extra300: low-wing aerobatic, amber + dark livery, shorter wings.
- *
- * The mesh is authored facing -Z (nose toward -Z), wings along X, up +Y,
- * so the flight loop can rotate it with intuitive Euler angles.
+ * CessnaSkyhawk: high-wing trainer with dihedral, strut bracing, tricycle gear.
+ * Extra300: low-wing aerobatic with clipped wings and bold livery.
  */
 export const PlaneModel = forwardRef<THREE.Group, PlaneModelProps>(
-  function PlaneModel({ planeId, throttle = 0 }, ref) {
+  function PlaneModel({ planeId, throttle = 0, airborne = false }, ref) {
     const isCessna = planeId === "CessnaSkyhawk";
+    const propRef = useRef<THREE.Group>(null);
 
     const colors = useMemo(
       () =>
         isCessna
           ? {
-              body: "#eef4fb",
-              accent: "#2bb8c9",
-              trim: "#1a6f7a",
-              glass: "#9fd6e6",
+              body: "#f2f6fa",
+              accent: "#1e9cb0",
+              trim: "#0d5a66",
+              glass: "#7ec8dc",
+              wing: "#e8eef4",
+              stripe: "#e85d2c",
             }
           : {
-              body: "#1c2230",
-              accent: "#e89a3c",
-              trim: "#b56a1e",
-              glass: "#3a4258",
+              body: "#1a2030",
+              accent: "#f0a030",
+              trim: "#8a5520",
+              glass: "#4a5568",
+              wing: "#222a3a",
+              stripe: "#f0a030",
             },
       [isCessna],
     );
 
-    const wingSpan = isCessna ? 7.2 : 5.6;
-    const wingY = isCessna ? 0.55 : -0.15;
-    const tailSpan = isCessna ? 2.6 : 2.2;
+    const wingSpan = isCessna ? 8.2 : 6.4;
+    const wingY = isCessna ? 0.75 : -0.2;
+    const tailSpan = isCessna ? 2.8 : 2.4;
+    const gearDown = !airborne;
+
+    useFrame((_, delta) => {
+      if (propRef.current) {
+        propRef.current.rotation.z += delta * (4 + throttle * 28);
+      }
+    });
 
     return (
       <group ref={ref}>
-        {/* Fuselage */}
-        <mesh castShadow rotation={[0, 0, Math.PI / 2]}>
-          <capsuleGeometry args={[0.42, 4.2, 6, 12]} />
+        {/* Fuselage — tapered body */}
+        <mesh
+          castShadow
+          position={[0, 0.05, 0.3]}
+          rotation={[0, 0, Math.PI / 2]}
+        >
+          <capsuleGeometry args={[0.38, 3.6, 8, 16]} />
           <meshStandardMaterial
             color={colors.body}
-            metalness={0.3}
-            roughness={0.45}
-          />
-        </mesh>
-
-        {/* Nose cone accent */}
-        <mesh position={[0, 0, -2.7]} rotation={[Math.PI / 2, 0, 0]}>
-          <coneGeometry args={[0.42, 0.9, 16]} />
-          <meshStandardMaterial
-            color={colors.accent}
-            metalness={0.5}
-            roughness={0.35}
-          />
-        </mesh>
-
-        {/* Cockpit canopy */}
-        <mesh position={[0, 0.32, -0.4]} rotation={[0.1, 0, 0]}>
-          <sphereGeometry
-            args={[0.5, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2]}
-          />
-          <meshStandardMaterial
-            color={colors.glass}
-            metalness={0.6}
-            roughness={0.1}
-            transparent
-            opacity={0.75}
-          />
-        </mesh>
-
-        {/* Main wings */}
-        <mesh position={[0, wingY, 0.2]} castShadow>
-          <boxGeometry args={[wingSpan, 0.12, 1.3]} />
-          <meshStandardMaterial
-            color={colors.body}
-            metalness={0.25}
-            roughness={0.5}
-          />
-        </mesh>
-        {/* Wing accent stripes */}
-        <mesh position={[0, wingY + 0.07, 0.2]}>
-          <boxGeometry args={[wingSpan, 0.02, 1.32]} />
-          <meshStandardMaterial
-            color={colors.accent}
-            metalness={0.4}
+            metalness={0.35}
             roughness={0.4}
           />
         </mesh>
-
-        {/* Tail — horizontal stabilizer */}
-        <mesh position={[0, 0.35, 2.3]} castShadow>
-          <boxGeometry args={[tailSpan, 0.1, 0.9]} />
+        {/* Belly fairing */}
+        <mesh position={[0, -0.18, 0.5]} rotation={[0.15, 0, 0]}>
+          <boxGeometry args={[0.55, 0.25, 2.8]} />
           <meshStandardMaterial
-            color={colors.body}
+            color={colors.trim}
+            metalness={0.2}
+            roughness={0.55}
+          />
+        </mesh>
+
+        {/* Nose / spinner */}
+        <mesh position={[0, 0.05, -2.35]} rotation={[Math.PI / 2, 0, 0]}>
+          <coneGeometry args={[0.36, 0.7, 16]} />
+          <meshStandardMaterial
+            color={colors.accent}
+            metalness={0.55}
+            roughness={0.3}
+          />
+        </mesh>
+
+        {/* Propeller */}
+        <group ref={propRef} position={[0, 0.05, -2.65]}>
+          <mesh rotation={[0, 0, 0]}>
+            <boxGeometry args={[wingSpan * 0.22, 0.06, 0.12]} />
+            <meshStandardMaterial
+              color="#2a3038"
+              metalness={0.6}
+              roughness={0.35}
+            />
+          </mesh>
+          <mesh rotation={[0, 0, Math.PI / 2]}>
+            <boxGeometry args={[wingSpan * 0.22, 0.06, 0.12]} />
+            <meshStandardMaterial
+              color="#2a3038"
+              metalness={0.6}
+              roughness={0.35}
+            />
+          </mesh>
+          <mesh>
+            <cylinderGeometry args={[0.08, 0.08, 0.15, 10]} />
+            <meshStandardMaterial
+              color="#444"
+              metalness={0.7}
+              roughness={0.25}
+            />
+          </mesh>
+        </group>
+
+        {/* Cockpit canopy */}
+        <mesh position={[0, 0.42, -0.2]} rotation={[0.08, 0, 0]}>
+          <sphereGeometry
+            args={[0.48, 20, 14, 0, Math.PI * 2, 0, Math.PI * 0.55]}
+          />
+          <meshStandardMaterial
+            color={colors.glass}
+            metalness={0.7}
+            roughness={0.08}
+            transparent
+            opacity={0.72}
+          />
+        </mesh>
+        {/* Side windows */}
+        <mesh position={[0.28, 0.35, -0.1]} rotation={[0, 0, -0.3]}>
+          <boxGeometry args={[0.04, 0.22, 0.5]} />
+          <meshStandardMaterial
+            color={colors.glass}
+            transparent
+            opacity={0.65}
+            metalness={0.5}
+          />
+        </mesh>
+        <mesh position={[-0.28, 0.35, -0.1]} rotation={[0, 0, 0.3]}>
+          <boxGeometry args={[0.04, 0.22, 0.5]} />
+          <meshStandardMaterial
+            color={colors.glass}
+            transparent
+            opacity={0.65}
+            metalness={0.5}
+          />
+        </mesh>
+
+        {/* Main wings with dihedral */}
+        <group
+          position={[0, wingY, 0.15]}
+          rotation={[0, 0, isCessna ? 0.12 : 0]}
+        >
+          <mesh castShadow>
+            <boxGeometry args={[wingSpan, 0.14, 1.5]} />
+            <meshStandardMaterial
+              color={colors.wing}
+              metalness={0.25}
+              roughness={0.48}
+            />
+          </mesh>
+          {/* Wing tips */}
+          <mesh position={[wingSpan / 2 - 0.15, 0.08, 0]}>
+            <boxGeometry args={[0.3, 0.18, 1.52]} />
+            <meshStandardMaterial color={colors.accent} metalness={0.3} />
+          </mesh>
+          <mesh position={[-wingSpan / 2 + 0.15, 0.08, 0]}>
+            <boxGeometry args={[0.3, 0.18, 1.52]} />
+            <meshStandardMaterial color={colors.accent} metalness={0.3} />
+          </mesh>
+          {/* Livery stripe */}
+          <mesh position={[0, 0.09, 0.1]}>
+            <boxGeometry args={[wingSpan * 0.7, 0.03, 1.55]} />
+            <meshStandardMaterial color={colors.stripe} metalness={0.4} />
+          </mesh>
+        </group>
+
+        {/* Wing struts (Cessna high-wing) */}
+        {isCessna && (
+          <>
+            <mesh position={[1.6, 0.35, 0.2]} rotation={[0, 0, -0.35]}>
+              <cylinderGeometry args={[0.04, 0.04, 1.1, 6]} />
+              <meshStandardMaterial color={colors.trim} />
+            </mesh>
+            <mesh position={[-1.6, 0.35, 0.2]} rotation={[0, 0, 0.35]}>
+              <cylinderGeometry args={[0.04, 0.04, 1.1, 6]} />
+              <meshStandardMaterial color={colors.trim} />
+            </mesh>
+          </>
+        )}
+
+        {/* Tail assembly */}
+        <mesh position={[0, 0.4, 2.45]} castShadow>
+          <boxGeometry args={[tailSpan, 0.1, 1.0]} />
+          <meshStandardMaterial
+            color={colors.wing}
             metalness={0.25}
             roughness={0.5}
           />
         </mesh>
-        {/* Vertical stabilizer */}
-        <mesh position={[0, 1.0, 2.4]} castShadow>
-          <boxGeometry args={[0.1, 1.1, 0.9]} />
+        <mesh position={[0, 1.15, 2.55]} castShadow>
+          <boxGeometry args={[0.12, 1.2, 0.95]} />
           <meshStandardMaterial
             color={colors.accent}
             metalness={0.35}
-            roughness={0.45}
+            roughness={0.42}
           />
         </mesh>
+        {/* Rudder */}
+        <mesh position={[0, 1.15, 2.95]}>
+          <boxGeometry args={[0.08, 1.0, 0.35]} />
+          <meshStandardMaterial color={colors.stripe} metalness={0.3} />
+        </mesh>
 
-        {/* Engine exhaust glow — scales with throttle */}
-        <mesh position={[0, 0, 3.05]}>
-          <sphereGeometry args={[0.18 + throttle * 0.22, 10, 8]} />
+        {/* Engine exhaust */}
+        <mesh position={[0.22, -0.05, 2.85]}>
+          <cylinderGeometry args={[0.06, 0.08, 0.25, 8]} />
           <meshBasicMaterial
-            color={throttle > 0.6 ? "#ff8a3c" : "#5fd0e0"}
+            color={throttle > 0.5 ? "#ff9a40" : "#4a5568"}
             transparent
-            opacity={0.35 + throttle * 0.5}
+            opacity={0.5 + throttle * 0.4}
           />
         </mesh>
 
-        {/* Landing gear — simple struts so takeoff/landing reads visually */}
-        <group>
-          <mesh position={[1.4, -0.55, -0.4]}>
-            <cylinderGeometry args={[0.06, 0.06, 0.7, 8]} />
-            <meshStandardMaterial color={colors.trim} />
-          </mesh>
-          <mesh position={[1.4, -0.85, -0.4]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.18, 0.18, 0.18, 12]} />
-            <meshStandardMaterial color="#111" />
-          </mesh>
-          <mesh position={[-1.4, -0.55, -0.4]}>
-            <cylinderGeometry args={[0.06, 0.06, 0.7, 8]} />
-            <meshStandardMaterial color={colors.trim} />
-          </mesh>
-          <mesh position={[-1.4, -0.85, -0.4]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.18, 0.18, 0.18, 12]} />
-            <meshStandardMaterial color="#111" />
-          </mesh>
-          <mesh position={[0, -0.5, 2.3]}>
-            <cylinderGeometry args={[0.05, 0.05, 0.5, 8]} />
-            <meshStandardMaterial color={colors.trim} />
-          </mesh>
-          <mesh position={[0, -0.72, 2.3]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.14, 0.14, 0.14, 10]} />
-            <meshStandardMaterial color="#111" />
-          </mesh>
+        {/* Landing gear — retracts visually when airborne */}
+        <group visible={gearDown}>
+          <LandingGear x={1.5} z={-0.3} strutH={0.75} colors={colors} />
+          <LandingGear x={-1.5} z={-0.3} strutH={0.75} colors={colors} />
+          <LandingGear x={0} z={2.1} strutH={0.55} colors={colors} nose />
         </group>
       </group>
     );
   },
 );
+
+function LandingGear({
+  x,
+  z,
+  strutH,
+  colors,
+  nose = false,
+}: {
+  x: number;
+  z: number;
+  strutH: number;
+  colors: { trim: string };
+  nose?: boolean;
+}) {
+  const wheelR = nose ? 0.14 : 0.17;
+  return (
+    <group position={[x, 0, z]}>
+      <mesh position={[0, -strutH / 2, 0]}>
+        <cylinderGeometry args={[0.05, 0.05, strutH, 8]} />
+        <meshStandardMaterial color={colors.trim} metalness={0.4} />
+      </mesh>
+      <mesh position={[0, -strutH, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[wheelR, wheelR, 0.14, 14]} />
+        <meshStandardMaterial color="#1a1a1a" roughness={0.9} />
+      </mesh>
+    </group>
+  );
+}
