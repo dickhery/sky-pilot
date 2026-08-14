@@ -52,7 +52,7 @@ export function FlightPlansPage() {
           </div>
         </div>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Each plan defines a departure runway, a guided destination waypoint,
+          Each plan defines a departure runway, a string of fly-through gates,
           and a landing runway. Choose your aircraft and weather, then arm the
           plan to take off.
         </p>

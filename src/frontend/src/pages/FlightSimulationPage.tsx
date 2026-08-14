@@ -4,14 +4,13 @@ import { HUD } from "@/components/flight/HUD";
 import { ResultsScreen } from "@/components/flight/ResultsScreen";
 import {
   APPROACH_SPEED_KTS,
-  type FlightState,
   type LandingHint,
   ROTATE_SPEED_KTS,
   bearing,
   buildSceneLayout,
   computeScore,
-  createInitialRotation,
-  distanceToLandingThreshold,
+  createInitialFlightState,
+  currentNavTarget,
   missionStep,
 } from "@/components/flight/flightPhysics";
 import { Button } from "@/components/ui/button";
@@ -63,20 +62,7 @@ export function FlightSimulationPage() {
 
   const layout = useMemo(buildSceneLayout, []);
 
-  // Initialize flight state once.
-  const flightState = useRef<FlightState>({
-    position: layout.departureStart.clone(),
-    rotation: createInitialRotation(layout.departureHeading),
-    speed: 0,
-    verticalSpeed: 0,
-    phase: "takeoff",
-    elapsed: 0,
-    touchdown: null,
-    finished: false,
-    airborne: false,
-    landingHint: null,
-    hasFlown: false,
-  });
+  const flightState = useRef(createInitialFlightState(layout));
 
   const [phase, setPhaseState] = useState<FlightPhase>("takeoff");
   const [telemetry, setTelemetry] = useState({
@@ -92,6 +78,9 @@ export function FlightSimulationPage() {
     name: string;
     distance: number;
     bearing: number;
+    kind: "gate" | "runway";
+    index: number;
+    total: number;
   } | null>(null);
   const [score, setScoreState] = useState<ScoreBreakdown>({
     speed: 0,
@@ -128,34 +117,34 @@ export function FlightSimulationPage() {
         step: missionStep(s.phase),
       });
 
-      if (s.phase === "takeoff" || s.phase === "cruising") {
-        const target = layout.waypoint;
-        setWaypointInfo({
-          name: selectedPlan?.waypoint.name ?? "Waypoint",
-          distance: s.position.distanceTo(target) / 1852,
-          bearing: bearing(s.position, target),
-        });
-      } else if (
-        s.phase === "landing" ||
-        s.phase === "rollout" ||
-        s.phase === "complete"
-      ) {
-        const target = layout.landingThreshold;
-        setWaypointInfo({
-          name: selectedPlan?.landing.name ?? "Landing Runway",
-          distance: distanceToLandingThreshold(s.position, layout) / 1852,
-          bearing: bearing(s.position, target),
-        });
-      } else {
+      if (s.phase === "crashed" || s.phase === "complete") {
         setWaypointInfo(null);
+      } else {
+        const nav = currentNavTarget(s, layout);
+        const name =
+          nav.kind === "gate" &&
+          layout.checkpoints[s.nextCheckpoint]?.id === "waypoint"
+            ? (selectedPlan?.waypoint.name ?? nav.name)
+            : nav.kind === "runway"
+              ? (selectedPlan?.landing.name ?? nav.name)
+              : nav.name;
+        setWaypointInfo({
+          name,
+          distance: s.position.distanceTo(nav.position) / 1852,
+          bearing: bearing(s.position, nav.position),
+          kind: nav.kind,
+          index: Math.min(s.nextCheckpoint + 1, layout.checkpoints.length),
+          total: layout.checkpoints.length,
+        });
       }
     }, 100);
     return () => clearInterval(id);
   }, [layout, selectedPlan]);
 
-  // On completion, compute score and persist.
+  // On a successful landing, score and persist. Crashes end the flight
+  // without a canister write (no score to keep, and no extra cycles).
   useEffect(() => {
-    if (phase !== "complete" || showResults) return;
+    if ((phase !== "complete" && phase !== "crashed") || showResults) return;
     const s = flightState.current;
     const computed = computeScore(s, layout, selectedPlane ?? fallbackPlane);
     setScoreState(computed);
@@ -163,31 +152,31 @@ export function FlightSimulationPage() {
     setFinalDuration(s.elapsed);
     setShowResults(true);
 
-    // Persist to backend.
-    if (selectedPlane && selectedPlan) {
-      recordMutation.mutate(
-        {
-          completedAt: BigInt(Date.now()),
-          planName: selectedPlan.name,
-          plane:
-            selectedPlane.id === "CessnaSkyhawk"
-              ? BackendPlane.cessna
-              : BackendPlane.gulfstream,
-          weather: selectedPlan.weather,
-          score: {
-            speed: BigInt(computed.speed),
-            landingSmoothness: BigInt(computed.landingSmoothness),
-            total: BigInt(computed.total),
-          },
-        },
-        {
-          onSuccess: () => setPersisted(true),
-          onError: () => setPersisted(true), // still let user proceed
-        },
-      );
-    } else {
+    if (phase === "crashed" || !selectedPlane || !selectedPlan) {
       setPersisted(true);
+      return;
     }
+
+    recordMutation.mutate(
+      {
+        completedAt: BigInt(Date.now()),
+        planName: selectedPlan.name,
+        plane:
+          selectedPlane.id === "CessnaSkyhawk"
+            ? BackendPlane.cessna
+            : BackendPlane.gulfstream,
+        weather: selectedPlan.weather,
+        score: {
+          speed: BigInt(computed.speed),
+          landingSmoothness: BigInt(computed.landingSmoothness),
+          total: BigInt(computed.total),
+        },
+      },
+      {
+        onSuccess: () => setPersisted(true),
+        onError: () => setPersisted(true),
+      },
+    );
   }, [
     phase,
     showResults,
@@ -234,19 +223,7 @@ export function FlightSimulationPage() {
   );
 
   const handleRetry = () => {
-    flightState.current = {
-      position: layout.departureStart.clone(),
-      rotation: createInitialRotation(layout.departureHeading),
-      speed: 0,
-      verticalSpeed: 0,
-      phase: "takeoff",
-      elapsed: 0,
-      touchdown: null,
-      finished: false,
-      airborne: false,
-      landingHint: null,
-      hasFlown: false,
-    };
+    flightState.current = createInitialFlightState(layout);
     setPhaseState("takeoff");
     setPhase("takeoff");
     setShowResults(false);
@@ -290,6 +267,8 @@ export function FlightSimulationPage() {
           plane={selectedPlane}
           durationSec={finalDuration}
           persisted={persisted}
+          crashed={phase === "crashed"}
+          crashReason={flightState.current.crashReason}
           onRetry={handleRetry}
         />
       )}
@@ -316,14 +295,17 @@ function getMissionBrief(
           };
     case "cruising":
       return {
-        objective: `Navigate to ${waypointName}`,
-        subObjective: `Then descend toward ${landingName} (runway offset to the right)`,
+        objective: `Fly through the ${waypointName} rings`,
+        subObjective:
+          "Each cyan ring is a required gate — fly through the glowing one",
       };
     case "landing":
       return {
         objective: `Land on ${landingName}`,
-        subObjective: `Bank right toward the second runway · heading 000° · slow to ${APPROACH_SPEED_KTS} kt · flare with W`,
+        subObjective: `Line up heading 000° · slow to ${APPROACH_SPEED_KTS} kt · flare with W. A bad landing is a crash.`,
       };
+    case "crashed":
+      return { objective: "Flight over — the aircraft is down" };
     case "rollout":
       return {
         objective: "Complete the landing rollout",

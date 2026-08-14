@@ -72,6 +72,7 @@ export type FlightPhase =
   | "cruising"
   | "landing"
   | "rollout"
-  | "complete";
+  | "complete"
+  | "crashed";
 
 export type GameStatus = "ready" | "in_flight" | "paused" | "finished";

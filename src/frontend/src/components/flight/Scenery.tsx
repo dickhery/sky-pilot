@@ -42,8 +42,8 @@ function makeGrassTexture(): THREE.CanvasTexture {
 }
 
 function isRunwayCorridor(x: number, z: number): boolean {
-  const dep = Math.abs(x) < 16 && z > -100 && z < 100;
-  const land = Math.abs(x - 22) < 16 && z < -270 && z > -450;
+  const dep = Math.abs(x) < 18 && z > -170 && z < 170;
+  const land = Math.abs(x - 110) < 18 && z < -1720 && z > -2020;
   return dep || land;
 }
 
@@ -59,7 +59,7 @@ function isLake(x: number, z: number): boolean {
  */
 export function Terrain() {
   const { geometry, texture } = useMemo(() => {
-    const size = 1400;
+    const size = 4000;
     const segments = 96;
     const geo = new THREE.PlaneGeometry(size, size, segments, segments);
     const pos = geo.attributes.position;
@@ -77,8 +77,8 @@ export function Terrain() {
     }[] = [];
     for (let i = 0; i < 28; i++) {
       patches.push({
-        x: (fieldRand() - 0.5) * 700,
-        z: fieldRand() * -500 + 40,
+        x: (fieldRand() - 0.5) * 1600,
+        z: fieldRand() * -2100 + 80,
         r: 18 + fieldRand() * 36,
         hue: 0.18 + fieldRand() * 0.12,
         lit: 0.28 + fieldRand() * 0.14,
@@ -88,10 +88,10 @@ export function Terrain() {
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i);
       const y = pos.getY(i);
-      // Mesh is rotated -90° about X and placed at z = -160, so local Y
+      // Mesh is rotated -90° about X and placed at z = -900, so local Y
       // becomes world −Z.
       const worldX = x;
-      const worldZ = -y - 160;
+      const worldZ = -y - 900;
 
       const hill =
         Math.sin(worldX * 0.008 + worldZ * 0.006) * 7 +
@@ -99,7 +99,7 @@ export function Terrain() {
         Math.cos(worldZ * 0.014 + worldX * 0.01) * 4.2 +
         Math.sin(worldX * 0.035) * 1.4;
 
-      const distDep = Math.min(Math.abs(worldX), Math.abs(worldX - 22) * 0.75);
+      const distDep = Math.min(Math.abs(worldX), Math.abs(worldX - 110) * 0.75);
       const t = THREE.MathUtils.clamp(distDep / 40, 0, 1);
       const flatten = t * t * (3 - 2 * t);
 
@@ -163,7 +163,7 @@ export function Terrain() {
     <mesh
       geometry={geometry}
       rotation={[-Math.PI / 2, 0, 0]}
-      position={[0, -0.35, -160]}
+      position={[0, -0.35, -900]}
       receiveShadow
     >
       <meshStandardMaterial
@@ -181,9 +181,9 @@ export function TreeField() {
   const pines = useMemo(() => {
     const rand = seededRandom(77);
     const arr: { x: number; z: number; scale: number; rot: number }[] = [];
-    for (let i = 0; i < 160; i++) {
-      const x = (rand() - 0.5) * 620;
-      const z = rand() * -520 + 90;
+    for (let i = 0; i < 220; i++) {
+      const x = (rand() - 0.5) * 1400;
+      const z = rand() * -2100 + 120;
       if (isRunwayCorridor(x, z)) continue;
       if (isLake(x, z)) continue;
       if (Math.abs(x) < 28 && z > -20 && z < 90) continue;
@@ -200,9 +200,9 @@ export function TreeField() {
   const deciduous = useMemo(() => {
     const rand = seededRandom(131);
     const arr: { x: number; z: number; scale: number }[] = [];
-    for (let i = 0; i < 40; i++) {
-      const x = (rand() - 0.5) * 500;
-      const z = rand() * -360 + 40;
+    for (let i = 0; i < 55; i++) {
+      const x = (rand() - 0.5) * 1100;
+      const z = rand() * -1800 + 60;
       if (isRunwayCorridor(x, z)) continue;
       if (isLake(x, z)) continue;
       arr.push({ x, z, scale: 0.8 + rand() * 1.1 });
@@ -355,7 +355,7 @@ export function DistantMountains() {
   }, []);
 
   return (
-    <mesh geometry={geometry} position={[20, -4, -520]} rotation={[0, 0, 0]}>
+    <mesh geometry={geometry} position={[40, -4, -2280]} rotation={[0, 0, 0]}>
       <meshStandardMaterial
         vertexColors
         roughness={0.95}
@@ -399,6 +399,33 @@ export function AirportBuildings() {
       {/* Apron */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-2, 0.03, 8]}>
         <planeGeometry args={[42, 22]} />
+        <meshStandardMaterial color="#2a2e34" roughness={0.88} />
+      </mesh>
+    </group>
+  );
+}
+
+/** Compact destination field next to the landing runway. */
+export function DestinationAirport() {
+  return (
+    <group position={[132, 0, -1680]}>
+      <Hangar position={[0, 0, 8]} width={12} depth={8} height={4} />
+      <mesh position={[8, 3.2, -4]} castShadow>
+        <boxGeometry args={[2.4, 6.4, 2.4]} />
+        <meshStandardMaterial color="#c5cdd6" roughness={0.55} />
+      </mesh>
+      <mesh position={[8, 6.7, -4]}>
+        <boxGeometry args={[3.2, 1.1, 3.2]} />
+        <meshStandardMaterial
+          color="#7eb0c8"
+          metalness={0.5}
+          roughness={0.15}
+          transparent
+          opacity={0.55}
+        />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-4, 0.03, 4]}>
+        <planeGeometry args={[28, 18]} />
         <meshStandardMaterial color="#2a2e34" roughness={0.88} />
       </mesh>
     </group>

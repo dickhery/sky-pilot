@@ -2,12 +2,14 @@ import { Environment } from "@/components/flight/Environment";
 import { PlaneModel } from "@/components/flight/PlaneModel";
 import {
   AirportBuildings,
+  DestinationAirport,
   DistantMountains,
   Terrain,
   TreeField,
   WaterBody,
 } from "@/components/flight/Scenery";
 import {
+  type Checkpoint,
   type FlightState,
   type SceneLayout,
   buildSceneLayout,
@@ -58,7 +60,7 @@ export function FlightScene({
         toneMapping: THREE.ACESFilmicToneMapping,
         toneMappingExposure: 1.05,
       }}
-      camera={{ fov: 58, near: 0.15, far: 1400, position: [0, 6, 50] }}
+      camera={{ fov: 58, near: 0.15, far: 2800, position: [0, 6, 50] }}
     >
       <Environment weather={weather} />
       <Terrain />
@@ -66,6 +68,7 @@ export function FlightScene({
       <TreeField />
       <DistantMountains />
       <AirportBuildings />
+      <DestinationAirport />
       <Runway
         start={layout.departureStart}
         end={layout.departureEnd}
@@ -77,12 +80,14 @@ export function FlightScene({
         weather={weather}
         isLanding
       />
-      <Taxiway
-        from={new THREE.Vector3(0, 0.015, 55)}
-        to={new THREE.Vector3(22, 0.015, 55)}
+      <CheckpointCourse layout={layout} flightState={flightState} />
+      <LandingRunwayMarker
+        position={layout.landingThreshold}
+        visibleWhen={() =>
+          flightState.current.nextCheckpoint >= layout.checkpoints.length &&
+          !flightState.current.finished
+        }
       />
-      <LandingRunwayMarker position={layout.landingThreshold} />
-      <WaypointMarker position={layout.waypoint} />
       <FlightRig
         plane={plane}
         layout={layout}
@@ -95,21 +100,6 @@ export function FlightScene({
 }
 
 // ── Scene pieces ────────────────────────────────────────────────────────────
-
-function Taxiway({ from, to }: { from: THREE.Vector3; to: THREE.Vector3 }) {
-  const length = from.distanceTo(to);
-  const center = from.clone().add(to).multiplyScalar(0.5);
-  const heading = Math.atan2(to.x - from.x, to.z - from.z);
-  return (
-    <mesh
-      position={[center.x, center.y, center.z]}
-      rotation={[-Math.PI / 2, 0, -heading]}
-    >
-      <planeGeometry args={[length, 6]} />
-      <meshStandardMaterial color="#2a2e34" roughness={0.9} />
-    </mesh>
-  );
-}
 
 function Runway({
   start,
@@ -253,13 +243,106 @@ function ApproachLight({
   );
 }
 
-function LandingRunwayMarker({ position }: { position: THREE.Vector3 }) {
+function CheckpointCourse({
+  layout,
+  flightState,
+}: {
+  layout: SceneLayout;
+  flightState: React.MutableRefObject<FlightState>;
+}) {
+  return (
+    <group>
+      {layout.checkpoints.map((cp, i) => {
+        const prev =
+          i === 0 ? layout.departureStart : layout.checkpoints[i - 1].position;
+        return (
+          <CheckpointRing
+            key={cp.id}
+            checkpoint={cp}
+            inboundFrom={prev}
+            index={i}
+            flightState={flightState}
+          />
+        );
+      })}
+    </group>
+  );
+}
+
+function CheckpointRing({
+  checkpoint,
+  inboundFrom,
+  index,
+  flightState,
+}: {
+  checkpoint: Checkpoint;
+  inboundFrom: THREE.Vector3;
+  index: number;
+  flightState: React.MutableRefObject<FlightState>;
+}) {
+  const ref = useRef<THREE.Group>(null);
+  const matRef = useRef<THREE.MeshBasicMaterial>(null);
+  const heading = Math.atan2(
+    checkpoint.position.x - inboundFrom.x,
+    checkpoint.position.z - inboundFrom.z,
+  );
+
+  useFrame((clockState) => {
+    if (!ref.current) return;
+    const next = flightState.current.nextCheckpoint;
+    const collected = next > index;
+    const active = next === index && !flightState.current.finished;
+    ref.current.visible = !collected;
+    if (!active) {
+      ref.current.scale.setScalar(0.92);
+      if (matRef.current) matRef.current.opacity = 0.28;
+      return;
+    }
+    const pulse = 1 + Math.sin(clockState.clock.elapsedTime * 2.6) * 0.08;
+    ref.current.scale.setScalar(pulse);
+    if (matRef.current) {
+      matRef.current.opacity = 0.88;
+    }
+  });
+
+  return (
+    <group ref={ref} position={checkpoint.position} rotation={[0, heading, 0]}>
+      <mesh>
+        <torusGeometry args={[10, 0.42, 12, 40]} />
+        <meshBasicMaterial
+          ref={matRef}
+          color="#2bb8c9"
+          transparent
+          opacity={0.85}
+        />
+      </mesh>
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[8.4, 11.4, 40]} />
+        <meshBasicMaterial
+          color="#7ee7f2"
+          transparent
+          opacity={0.18}
+          side={THREE.DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function LandingRunwayMarker({
+  position,
+  visibleWhen,
+}: {
+  position: THREE.Vector3;
+  visibleWhen: () => boolean;
+}) {
   const ref = useRef<THREE.Group>(null);
   useFrame((state) => {
-    if (ref.current) {
-      const pulse = 1 + Math.sin(state.clock.elapsedTime * 2.4) * 0.12;
-      ref.current.scale.setScalar(pulse);
-    }
+    if (!ref.current) return;
+    ref.current.visible = visibleWhen();
+    const pulse = 1 + Math.sin(state.clock.elapsedTime * 2.4) * 0.12;
+    ref.current.scale.setScalar(pulse);
   });
   return (
     <group ref={ref} position={[position.x, position.y + 10, position.z]}>
@@ -272,37 +355,6 @@ function LandingRunwayMarker({ position }: { position: THREE.Vector3 }) {
           side={THREE.DoubleSide}
           depthWrite={false}
         />
-      </mesh>
-      <mesh>
-        <coneGeometry args={[0.45, 2.2, 8]} />
-        <meshBasicMaterial color="#3dff7a" />
-      </mesh>
-    </group>
-  );
-}
-
-function WaypointMarker({ position }: { position: THREE.Vector3 }) {
-  const ref = useRef<THREE.Group>(null);
-  useFrame((state) => {
-    if (ref.current) {
-      ref.current.rotation.y = state.clock.elapsedTime * 0.45;
-      const s = 1 + Math.sin(state.clock.elapsedTime * 1.6) * 0.06;
-      ref.current.scale.setScalar(s);
-    }
-  });
-  return (
-    <group ref={ref} position={position}>
-      <mesh>
-        <torusGeometry args={[6, 0.28, 10, 36]} />
-        <meshBasicMaterial color="#2bb8c9" transparent opacity={0.8} />
-      </mesh>
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[6, 0.28, 10, 36]} />
-        <meshBasicMaterial color="#2bb8c9" transparent opacity={0.45} />
-      </mesh>
-      <mesh>
-        <sphereGeometry args={[0.85, 16, 16]} />
-        <meshBasicMaterial color="#e89a3c" />
       </mesh>
     </group>
   );

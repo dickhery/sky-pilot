@@ -1,4 +1,8 @@
 import type { FlightPlan } from "@/backend";
+import {
+  type CrashReason,
+  crashReasonMessage,
+} from "@/components/flight/flightPhysics";
 import { Button } from "@/components/ui/button";
 import type { Plane, ScoreBreakdown } from "@/types/game";
 import { useNavigate } from "@tanstack/react-router";
@@ -18,6 +22,8 @@ interface ResultsScreenProps {
   plane: Plane | null;
   durationSec: number;
   persisted: boolean;
+  crashed?: boolean;
+  crashReason?: CrashReason | null;
   onRetry: () => void;
 }
 
@@ -35,6 +41,8 @@ export function ResultsScreen({
   plane,
   durationSec,
   persisted,
+  crashed = false,
+  crashReason = null,
   onRetry,
 }: ResultsScreenProps) {
   const navigate = useNavigate();
@@ -71,49 +79,60 @@ export function ResultsScreen({
         <div className="flex items-center justify-between border-b border-border pb-4">
           <div>
             <p className="hud-label text-[10px] text-muted-foreground">
-              Flight Complete
+              {crashed ? "Aircraft Down" : "Flight Complete"}
             </p>
             <h2 className="font-display text-2xl font-semibold tracking-tight text-foreground">
-              {plan?.name ?? "Flight"}
+              {crashed ? "Crashed" : (plan?.name ?? "Flight")}
             </h2>
             <p className="hud-label mt-1 text-[10px] text-muted-foreground">
               {plane?.name ?? "Aircraft"} · {durationStr}
             </p>
           </div>
           <div className="flex flex-col items-end">
-            <span className={`font-display text-4xl font-bold ${grade.tone}`}>
-              {Math.round(score.total)}
+            <span
+              className={`font-display text-4xl font-bold ${crashed ? "text-accent" : grade.tone}`}
+            >
+              {crashed ? "—" : Math.round(score.total)}
             </span>
-            <span className={`hud-label text-[10px] ${grade.tone}`}>
-              {grade.label}
+            <span
+              className={`hud-label text-[10px] ${crashed ? "text-accent" : grade.tone}`}
+            >
+              {crashed ? "No score" : grade.label}
             </span>
           </div>
         </div>
 
-        {/* Score breakdown */}
-        <div className="mt-5 space-y-3" data-ocid="flight.results.breakdown">
-          <ScoreRow
-            icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
-            label="Speed"
-            value={score.speed}
-            description="Time to complete route"
-            dataOcid="flight.results.speed"
-          />
-          <ScoreRow
-            icon={<Award className="h-4 w-4" aria-hidden="true" />}
-            label="Landing Smoothness"
-            value={score.landingSmoothness}
-            description="Descent rate at touchdown"
-            dataOcid="flight.results.smoothness"
-          />
-          <ScoreRow
-            icon={<Crosshair className="h-4 w-4" aria-hidden="true" />}
-            label="Runway Alignment"
-            value={score.runwayAlignment}
-            description="Centerline accuracy"
-            dataOcid="flight.results.alignment"
-          />
-        </div>
+        {crashed && crashReason && (
+          <p className="mt-4 rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-accent">
+            {crashReasonMessage(crashReason)}
+          </p>
+        )}
+
+        {!crashed && (
+          <div className="mt-5 space-y-3" data-ocid="flight.results.breakdown">
+            <ScoreRow
+              icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
+              label="Speed"
+              value={score.speed}
+              description="Time to complete route"
+              dataOcid="flight.results.speed"
+            />
+            <ScoreRow
+              icon={<Award className="h-4 w-4" aria-hidden="true" />}
+              label="Landing Smoothness"
+              value={score.landingSmoothness}
+              description="Descent rate at touchdown"
+              dataOcid="flight.results.smoothness"
+            />
+            <ScoreRow
+              icon={<Crosshair className="h-4 w-4" aria-hidden="true" />}
+              label="Runway Alignment"
+              value={score.runwayAlignment}
+              description="Centerline accuracy"
+              dataOcid="flight.results.alignment"
+            />
+          </div>
+        )}
 
         {/* Persistence status */}
         <div className="mt-4 flex items-center gap-2 text-[11px]">
@@ -124,7 +143,9 @@ export function ResultsScreen({
                 aria-hidden="true"
               />
               <span className="hud-label text-primary">
-                Logged to flight logbook
+                {crashed
+                  ? "Crash not logged — no score earned"
+                  : "Logged to flight logbook"}
               </span>
             </>
           ) : (

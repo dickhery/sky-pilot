@@ -38,7 +38,7 @@ export function Environment({ weather }: EnvironmentProps) {
             mieCoefficient={0.004}
             mieDirectionalG={0.85}
           />
-          <fog attach="fog" args={["#c5dceb", 180, 780]} />
+          <fog attach="fog" args={["#c5dceb", 220, 1600]} />
           <Clouds material={THREE.MeshLambertMaterial} limit={24}>
             <Cloud
               seed={4}
@@ -65,7 +65,7 @@ export function Environment({ weather }: EnvironmentProps) {
       {weather === "Nighttime" && (
         <>
           <color attach="background" args={["#050814"]} />
-          <fog attach="fog" args={["#050814", 80, 420]} />
+          <fog attach="fog" args={["#050814", 100, 900]} />
           <Stars
             radius={280}
             depth={60}
@@ -90,7 +90,7 @@ export function Environment({ weather }: EnvironmentProps) {
             mieCoefficient={0.008}
             mieDirectionalG={0.7}
           />
-          <fog attach="fog" args={["#9aa8b6", 120, 560]} />
+          <fog attach="fog" args={["#9aa8b6", 160, 1300]} />
           <Clouds material={THREE.MeshLambertMaterial} limit={36}>
             <Cloud
               seed={7}

@@ -26,23 +26,28 @@ interface HUDProps {
   objective: string;
   subObjective?: string;
   landingHint: LandingHint;
-  nextWaypoint: { name: string; distance: number; bearing: number } | null;
+  nextWaypoint: {
+    name: string;
+    distance: number;
+    bearing: number;
+    kind?: "gate" | "runway";
+    index?: number;
+    total?: number;
+  } | null;
   throttlePct: number;
   brakesOn: boolean;
 }
 
 const MISSION_STEPS = [
   { phase: "takeoff", label: "Take off" },
-  { phase: "cruising", label: "Waypoint" },
+  { phase: "cruising", label: "Gates" },
   { phase: "landing", label: "Approach" },
   { phase: "rollout", label: "Land" },
 ] as const;
 
 const HINT_MESSAGES: Record<NonNullable<LandingHint>, string> = {
-  wrong_runway: "Wrong runway — fly to the landing runway (offset right)",
-  off_corridor: "Missed runway — go around and try the approach again",
-  too_fast: "Too fast — reduce throttle (Ctrl) before touchdown",
   brake_to_finish: "Touchdown! Hold Space to brake below 20 kt to finish",
+  gate_cleared: "Gate cleared — fly through the next ring",
 };
 
 export function HUD({
@@ -67,6 +72,7 @@ export function HUD({
     landing: "Approach",
     rollout: "Rollout",
     complete: "Complete",
+    crashed: "Crashed",
   };
 
   const headingStr = `${Math.round(((heading % 360) + 360) % 360)
@@ -252,9 +258,11 @@ export function HUD({
         >
           <div className="flex flex-col">
             <span className="hud-label text-[9px] text-muted-foreground">
-              {phase === "landing" || phase === "rollout"
-                ? "Landing Runway"
-                : "Navigate To"}
+              {nextWaypoint.kind === "gate"
+                ? `Fly through ${nextWaypoint.index ?? 0}/${nextWaypoint.total ?? 0}`
+                : phase === "landing" || phase === "rollout"
+                  ? "Landing Runway"
+                  : "Navigate To"}
             </span>
             <span className="hud-label text-sm font-bold text-primary">
               {nextWaypoint.name}

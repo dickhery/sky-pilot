@@ -42,12 +42,12 @@ const PHASES: Phase[] = [
     id: "navigation",
     step: 2,
     title: "Navigation",
-    summary: "Follow the on-screen guidance toward the destination waypoint.",
+    summary: "Fly through every glowing cyan ring on the course.",
     details: [
-      "A cyan horizon marker points toward the next waypoint — keep it near the top of the HUD.",
+      "Each ring is a required checkpoint — fly through the bright one to clear it.",
+      "Cleared rings vanish. The next gate lights up. Skip one and a landing will not count.",
       "Bank with A / D to turn — the aircraft yaws into the bank on its own.",
       "Hold back-pressure (W) in a turn or you will lose altitude. Pitch trades speed for height.",
-      "Watch the altitude tape and airspeed — stay within the green bands for a clean run.",
     ],
   },
   {
@@ -59,7 +59,7 @@ const PHASES: Phase[] = [
       "Line up with the runway centreline early — small roll corrections, no sudden banks.",
       "Reduce throttle with Ctrl to descend; aim for a steady glide path.",
       "Flare just before touchdown by pulling up gently on W to soften the contact.",
-      "Touch down on the main gear first, then lower the nose — apply Space to brake.",
+      "A hard, fast, crooked, or off-runway arrival crashes the aircraft — the flight is over. Only a clean landing on the destination runway earns a score.",
     ],
   },
 ];
@@ -275,8 +275,9 @@ export function FlightSchoolPage() {
                   Final Score
                 </span>{" "}
                 = Speed (40%) + Runway Alignment (30%) + Descent Rate (30%).
-                Land too hard or off-centre and even the fastest run won't reach
-                the top of the logbook.
+                Land too hard, too fast, off the runway, or without flying the
+                gates and the aircraft crashes — no score is logged. Only a
+                clean destination landing is written to the logbook.
               </p>
             </div>
           </CardContent>

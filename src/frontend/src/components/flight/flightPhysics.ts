@@ -13,16 +13,32 @@ export const RUNWAY_HALF_WIDTH = 6.5;
 export const ROTATE_SPEED_KTS = 55;
 /** Target approach speed shown in the HUD (kt). */
 export const APPROACH_SPEED_KTS = 70;
+/** World X of the destination runway. */
+export const LANDING_RUNWAY_X = 110;
+/** Hardest survivable touchdown (m/s). ~1,000 fpm. */
+export const MAX_SAFE_DESCENT_MPS = 5.2;
+/** Fastest survivable touchdown (m/s). ~80 kt. */
+export const MAX_SAFE_LANDING_MPS = 41;
 
 const G = 9.81;
 const _forward = new THREE.Vector3();
 
-export type LandingHint =
-  | null
+export type LandingHint = null | "brake_to_finish" | "gate_cleared";
+
+export type CrashReason =
+  | "hard_landing"
+  | "off_runway"
   | "wrong_runway"
-  | "off_corridor"
   | "too_fast"
-  | "brake_to_finish";
+  | "missed_course"
+  | "crooked";
+
+export interface Checkpoint {
+  id: string;
+  name: string;
+  position: THREE.Vector3;
+  radius: number;
+}
 
 /**
  * Shared flight-simulation state.
@@ -43,10 +59,16 @@ export interface FlightState {
   } | null;
   finished: boolean;
   airborne: boolean;
-  /** HUD feedback when a landing attempt fails or rollout is pending. */
+  /** HUD feedback during a successful rollout or gate pass. */
   landingHint: LandingHint;
   /** True once the player has been airborne at least once this flight. */
   hasFlown: boolean;
+  crashed: boolean;
+  crashReason: CrashReason | null;
+  /** Index of the next uncollected fly-through gate. */
+  nextCheckpoint: number;
+  /** Seconds remaining to flash "gate cleared" on the HUD. */
+  checkpointFlash: number;
 }
 
 export interface SceneLayout {
@@ -54,6 +76,7 @@ export interface SceneLayout {
   departureHeading: number;
   departureEnd: THREE.Vector3;
   waypoint: THREE.Vector3;
+  checkpoints: Checkpoint[];
   landingThreshold: THREE.Vector3;
   landingHeading: number;
   landingEnd: THREE.Vector3;
@@ -64,14 +87,42 @@ export function createInitialRotation(heading = 0): THREE.Euler {
 }
 
 export function buildSceneLayout(): SceneLayout {
-  const departureStart = new THREE.Vector3(0, GROUND_CONTACT_Y, 85);
-  const departureEnd = new THREE.Vector3(0, RUNWAY_ELEVATION, -85);
+  const departureStart = new THREE.Vector3(0, GROUND_CONTACT_Y, 150);
+  const departureEnd = new THREE.Vector3(0, RUNWAY_ELEVATION, -150);
   const departureHeading = 0;
 
-  const waypoint = new THREE.Vector3(-28, 62, -145);
+  const checkpoints: Checkpoint[] = [
+    {
+      id: "climbout",
+      name: "Climb-out Gate",
+      position: new THREE.Vector3(0, 72, -480),
+      radius: 16,
+    },
+    {
+      id: "waypoint",
+      name: "Course Gate",
+      position: new THREE.Vector3(-300, 88, -880),
+      radius: 16,
+    },
+    {
+      id: "final",
+      name: "Final Approach Gate",
+      position: new THREE.Vector3(LANDING_RUNWAY_X, 40, -1540),
+      radius: 16,
+    },
+  ];
 
-  const landingThreshold = new THREE.Vector3(22, RUNWAY_ELEVATION, -290);
-  const landingEnd = new THREE.Vector3(22, RUNWAY_ELEVATION, -430);
+  const waypoint = checkpoints[1].position;
+  const landingThreshold = new THREE.Vector3(
+    LANDING_RUNWAY_X,
+    RUNWAY_ELEVATION,
+    -1740,
+  );
+  const landingEnd = new THREE.Vector3(
+    LANDING_RUNWAY_X,
+    RUNWAY_ELEVATION,
+    -2000,
+  );
   const landingHeading = 0;
 
   return {
@@ -79,9 +130,57 @@ export function buildSceneLayout(): SceneLayout {
     departureEnd,
     departureHeading,
     waypoint,
+    checkpoints,
     landingThreshold,
     landingEnd,
     landingHeading,
+  };
+}
+
+export function createInitialFlightState(layout: SceneLayout): FlightState {
+  return {
+    position: layout.departureStart.clone(),
+    rotation: createInitialRotation(layout.departureHeading),
+    speed: 0,
+    verticalSpeed: 0,
+    phase: "takeoff",
+    elapsed: 0,
+    touchdown: null,
+    finished: false,
+    airborne: false,
+    landingHint: null,
+    hasFlown: false,
+    crashed: false,
+    crashReason: null,
+    nextCheckpoint: 0,
+    checkpointFlash: 0,
+  };
+}
+
+/** Polyline length through every gate to the far runway end. */
+export function routeLength(layout: SceneLayout): number {
+  let len = 0;
+  let prev = layout.departureStart;
+  for (const cp of layout.checkpoints) {
+    len += prev.distanceTo(cp.position);
+    prev = cp.position;
+  }
+  return len + prev.distanceTo(layout.landingEnd);
+}
+
+export function currentNavTarget(
+  state: FlightState,
+  layout: SceneLayout,
+): { name: string; position: THREE.Vector3; kind: "gate" | "runway" } {
+  const i = state.nextCheckpoint;
+  if (i < layout.checkpoints.length) {
+    const cp = layout.checkpoints[i];
+    return { name: cp.name, position: cp.position, kind: "gate" };
+  }
+  return {
+    name: "Landing Runway",
+    position: layout.landingThreshold,
+    kind: "runway",
   };
 }
 
@@ -101,6 +200,20 @@ function rotateSpeedMps(plane: Plane): number {
 
 function maxBank(plane: Plane): number {
   return 0.85 + plane.agility * 0.45;
+}
+
+function crash(state: FlightState, reason: CrashReason, groundY: number): void {
+  state.crashed = true;
+  state.crashReason = reason;
+  state.phase = "crashed";
+  state.finished = true;
+  state.airborne = false;
+  state.speed = 0;
+  state.verticalSpeed = 0;
+  state.position.y = groundY;
+  state.rotation.x *= 0.15;
+  state.rotation.z = THREE.MathUtils.clamp(state.rotation.z + 0.35, -0.8, 0.8);
+  state.landingHint = null;
 }
 
 /** True when position is over the landing runway corridor. */
@@ -156,8 +269,8 @@ export function distanceToLandingThreshold(
  * - Pitching up trades airspeed for altitude (and the reverse).
  * - A/D banks the wings in the air; the aircraft turns from that bank
  *   (coordinated). On the ground A/D steers the nosewheel.
- * - Lift comes from angle of attack and dynamic pressure; too slow or
- *   too much nose-up stalls and the nose drops.
+ * - A bad landing or ground contact off the destination runway is a crash.
+ * - Cyan gates must be flown through in order before a landing counts.
  */
 export function stepFlight(
   state: FlightState,
@@ -169,7 +282,14 @@ export function stepFlight(
   if (state.finished) return;
   const step = Math.min(dt, 0.05);
   state.elapsed += step;
-  state.landingHint = null;
+  if (state.landingHint === "gate_cleared" && state.checkpointFlash <= 0) {
+    state.landingHint = null;
+  } else if (state.landingHint !== "gate_cleared") {
+    state.landingHint = null;
+  }
+  if (state.checkpointFlash > 0) {
+    state.checkpointFlash = Math.max(0, state.checkpointFlash - step);
+  }
 
   if (state.rotation.order !== "YXZ") {
     state.rotation.order = "YXZ";
@@ -187,17 +307,21 @@ export function stepFlight(
 
   const wasAirborne = state.airborne;
   const airborneThreshold = groundY + 0.14;
-  state.airborne = state.position.y > airborneThreshold;
-  if (state.airborne) state.hasFlown = true;
+  const nowHigh = state.position.y > airborneThreshold;
+  if (nowHigh) {
+    state.airborne = true;
+    state.hasFlown = true;
+  }
 
   // ── Attitude ──────────────────────────────────────────────────────────
-  if (!state.airborne) {
-    // Nosewheel / rudder steering. Bank stays on the ground.
+  // Stay on the flight branch until wheels actually reach the surface so
+  // a descending airframe cannot "teleport" onto the ground without a
+  // landing / crash check.
+  if (!wasAirborne && !nowHigh) {
     const steerAuth = THREE.MathUtils.clamp(state.speed / 6, 0.15, 1.15);
     state.rotation.y -= input.roll * agility * 0.7 * steerAuth * step;
     state.rotation.z += (0 - bank) * Math.min(1, step * 8);
 
-    // Rotation (nose up) only once there is airflow over the elevator.
     if (state.speed >= vRotate * 0.55 || state.phase === "rollout") {
       state.rotation.x += input.pitch * agility * 0.42 * step;
       state.rotation.x = THREE.MathUtils.clamp(state.rotation.x, -0.04, 0.28);
@@ -209,7 +333,6 @@ export function stepFlight(
     const rollRate = agility * 1.05;
     state.rotation.x += input.pitch * pitchRate * step;
     state.rotation.x = THREE.MathUtils.clamp(state.rotation.x, -0.55, 0.72);
-    // D = +roll → right wing down → negative Z in this convention.
     state.rotation.z -= input.roll * rollRate * step;
     const bankLimit = maxBank(plane);
     state.rotation.z = THREE.MathUtils.clamp(
@@ -218,16 +341,11 @@ export function stepFlight(
       bankLimit,
     );
 
-    // Wings-level stability when the stick is released.
     if (input.roll === 0) {
       state.rotation.z *= 1 - Math.min(1, step * (0.55 + stability * 0.7));
     }
-    // Attitude hold: released elevator keeps the current pitch.
 
-    // Coordinated turn: yaw rate comes from bank, not from aileron input.
-    // Turn is slightly faster than real-world so the compact world stays fun.
     const speedForTurn = Math.max(state.speed, 10);
-    // Right bank (z < 0) must decrease heading so the nose tracks right.
     const yawRate = (Math.tan(state.rotation.z) * G * 1.15) / speedForTurn;
     state.rotation.y += yawRate * step;
   }
@@ -240,7 +358,6 @@ export function stepFlight(
   const aoa = state.rotation.x - pathAngle;
 
   const throttle = THREE.MathUtils.clamp(input.throttle, 0, 1);
-  // Static thrust-to-weight is sporty so the short runways still work.
   const thrustAccel = (5.1 + plane.agility * 1.6) * throttle;
   const q = 0.5 * state.speed * state.speed;
 
@@ -261,7 +378,6 @@ export function stepFlight(
   const heightAgl = state.position.y - groundY;
   const groundEffect = heightAgl < 3.5 ? 1 + (1 - heightAgl / 3.5) * 0.28 : 1;
 
-  // Calibrated so ~1G at cruise with a few degrees of AoA.
   const liftAccel = q * cl * 0.0165 * groundEffect;
 
   const cd0 = 0.0022 + (1 - plane.agility) * 0.00035;
@@ -270,23 +386,22 @@ export function stepFlight(
   const gravityAlongPath = G * Math.sin(pathAngle);
 
   let accel = thrustAccel - parasite - induced - gravityAlongPath;
-  if (!state.airborne) {
+  if (!wasAirborne && !nowHigh) {
     const onPaved = isOnAnyRunway(state.position, layout);
     const rolling = onPaved ? 0.55 : 2.4;
     const braking = input.brakes ? (onPaved ? 11 : 7) : 0;
     accel -= rolling + braking;
   } else if (input.brakes) {
-    // Airbrake / extra drag — useful on final.
     accel -= 2.2;
   }
 
   state.speed = Math.max(0, state.speed + accel * step);
-  if (!state.airborne && input.brakes) {
+  if (!wasAirborne && !nowHigh && input.brakes) {
     state.speed = Math.max(0, state.speed - step * 2);
   }
 
   // ── Vertical channel ──────────────────────────────────────────────────
-  if (!state.airborne) {
+  if (!wasAirborne && !nowHigh) {
     const canRotate =
       state.phase !== "rollout" &&
       state.speed >= vRotate * 0.92 &&
@@ -312,84 +427,35 @@ export function stepFlight(
     let vsAccel = verticalLift + thrustUp - G;
 
     if (stalled) {
-      // Nose drop and extra sink — recoverable by lowering the nose / adding power.
       state.rotation.x -= step * (0.55 + Math.max(0, aoa) * 0.8);
       vsAccel -= 3.2;
     }
 
-    // Light damping so the ride isn't springy.
     vsAccel -= state.verticalSpeed * 0.12;
     state.verticalSpeed += vsAccel * step;
     state.position.y += state.verticalSpeed * step;
 
     if (state.position.y <= groundY) {
-      const descentAtContact = Math.max(0, -state.verticalSpeed);
-      const hard = descentAtContact > 9;
-
-      if (hard && descentAtContact < 16) {
-        // Bounce rather than sticking a crash-rate arrival.
-        state.position.y = groundY + 0.2;
-        state.verticalSpeed = descentAtContact * 0.28;
-        state.speed *= 0.82;
-        state.rotation.x *= 0.55;
-      } else {
-        state.position.y = groundY;
-        state.airborne = false;
-        state.verticalSpeed = 0;
-        state.rotation.x *= 0.18;
-        state.rotation.z *= 0.15;
-
-        const onLanding = isOnLandingRunway(state.position, layout);
-        const onDeparture = isOnDepartureRunway(state.position, layout);
-
-        if (onLanding && wasAirborne && !state.touchdown) {
-          if (state.speed > vCruise * 0.85) {
-            state.landingHint = "too_fast";
-            state.speed *= 0.7;
-          }
-          const alignmentDeg = Math.abs(
-            THREE.MathUtils.radToDeg(state.rotation.y - layout.landingHeading),
-          );
-          state.touchdown = {
-            descentRate: descentAtContact,
-            alignmentDeg,
-            speed: state.speed,
-            centerlineOffset: Math.abs(
-              state.position.x - layout.landingThreshold.x,
-            ),
-          };
-          state.phase = "rollout";
-          state.landingHint = "brake_to_finish";
-        } else if (wasAirborne && state.hasFlown) {
-          if (onDeparture) {
-            state.landingHint = "wrong_runway";
-          } else if (state.phase === "landing" || state.phase === "rollout") {
-            state.landingHint = "off_corridor";
-          }
-          state.speed *= 0.5;
-        }
-      }
+      resolveGroundContact(state, layout, wasAirborne, groundY, vCruise);
+      if (state.finished) return;
     }
   }
 
-  // Forward along heading. The aircraft always tracks its nose (no sideslip).
   const heading = state.rotation.y;
   _forward.set(-Math.sin(heading), 0, -Math.cos(heading));
   state.position.addScaledVector(_forward, state.speed * step);
 
-  // ── Phase transitions ─────────────────────────────────────────────────
+  collectCheckpoints(state, layout);
+
   if (state.phase === "takeoff" && state.airborne) {
     state.phase = "cruising";
   }
 
-  if (state.phase === "cruising") {
-    const nearWaypoint = state.position.distanceTo(layout.waypoint) < 55;
-    const nearLanding =
-      distanceToLandingThreshold(state.position, layout) < 200;
-    const onApproachPath = state.position.z < -160;
-    if (nearWaypoint || nearLanding || onApproachPath) {
-      state.phase = "landing";
-    }
+  if (
+    state.phase === "cruising" &&
+    state.nextCheckpoint >= layout.checkpoints.length
+  ) {
+    state.phase = "landing";
   }
 
   if (state.phase === "rollout" && !state.airborne) {
@@ -406,6 +472,84 @@ export function stepFlight(
   }
 }
 
+function collectCheckpoints(state: FlightState, layout: SceneLayout): void {
+  if (state.crashed || state.finished) return;
+  if (state.nextCheckpoint >= layout.checkpoints.length) return;
+  const cp = layout.checkpoints[state.nextCheckpoint];
+  if (state.position.distanceTo(cp.position) > cp.radius) return;
+  state.nextCheckpoint += 1;
+  state.checkpointFlash = 1.8;
+  state.landingHint = "gate_cleared";
+  if (state.nextCheckpoint >= layout.checkpoints.length) {
+    state.phase = "landing";
+  }
+}
+
+function resolveGroundContact(
+  state: FlightState,
+  layout: SceneLayout,
+  wasAirborne: boolean,
+  groundY: number,
+  vCruise: number,
+): void {
+  const descentAtContact = Math.max(0, -state.verticalSpeed);
+  state.position.y = groundY;
+  state.airborne = false;
+  state.verticalSpeed = 0;
+
+  if (!wasAirborne || !state.hasFlown) return;
+
+  const onLanding = isOnLandingRunway(state.position, layout);
+  const onDeparture = isOnDepartureRunway(state.position, layout);
+  const courseComplete = state.nextCheckpoint >= layout.checkpoints.length;
+  const alignmentDeg = Math.abs(
+    THREE.MathUtils.radToDeg(state.rotation.y - layout.landingHeading),
+  );
+
+  if (!onLanding && !onDeparture) {
+    crash(state, "off_runway", groundY);
+    return;
+  }
+  if (onDeparture) {
+    // A bounced rotate on the departure strip is not a crash. Coming
+    // back after leaving the field, or after any gate, is.
+    const leftTheField =
+      state.nextCheckpoint > 0 || state.position.z < layout.departureEnd.z - 40;
+    if (!leftTheField && state.phase !== "landing") {
+      return;
+    }
+    crash(state, "wrong_runway", groundY);
+    return;
+  }
+  if (!courseComplete) {
+    crash(state, "missed_course", groundY);
+    return;
+  }
+  if (descentAtContact > MAX_SAFE_DESCENT_MPS) {
+    crash(state, "hard_landing", groundY);
+    return;
+  }
+  if (state.speed > MAX_SAFE_LANDING_MPS || state.speed > vCruise * 0.78) {
+    crash(state, "too_fast", groundY);
+    return;
+  }
+  if (alignmentDeg > 28) {
+    crash(state, "crooked", groundY);
+    return;
+  }
+
+  state.rotation.x *= 0.18;
+  state.rotation.z *= 0.15;
+  state.touchdown = {
+    descentRate: descentAtContact,
+    alignmentDeg,
+    speed: state.speed,
+    centerlineOffset: Math.abs(state.position.x - layout.landingThreshold.x),
+  };
+  state.phase = "rollout";
+  state.landingHint = "brake_to_finish";
+}
+
 export function computeScore(
   state: FlightState,
   layout: SceneLayout,
@@ -416,8 +560,11 @@ export function computeScore(
   runwayAlignment: number;
   total: number;
 } {
-  const routeLen = layout.departureStart.distanceTo(layout.landingEnd);
-  const parTime = routeLen / cruiseSpeedMps(plane) / 0.62;
+  if (state.crashed || !state.touchdown) {
+    return { speed: 0, landingSmoothness: 0, runwayAlignment: 0, total: 0 };
+  }
+
+  const parTime = routeLength(layout) / cruiseSpeedMps(plane) / 0.62;
   const speedRatio = Math.min(1.5, state.elapsed / parTime);
   const speed = Math.max(
     0,
@@ -425,17 +572,15 @@ export function computeScore(
   );
 
   const td = state.touchdown;
-  let landingSmoothness = 50;
-  let runwayAlignment = 50;
-  if (td) {
-    const descentScore = Math.max(0, 100 - (td.descentRate - 1.2) * 22);
-    landingSmoothness = Math.round(Math.max(0, Math.min(100, descentScore)));
-    const alignScore = Math.max(0, 100 - td.alignmentDeg * 5);
-    const centerlineScore = Math.max(0, 100 - td.centerlineOffset * 12);
-    runwayAlignment = Math.round(
-      Math.max(0, Math.min(100, alignScore * 0.6 + centerlineScore * 0.4)),
-    );
-  }
+  const descentScore = Math.max(0, 100 - (td.descentRate - 1.2) * 22);
+  const landingSmoothness = Math.round(
+    Math.max(0, Math.min(100, descentScore)),
+  );
+  const alignScore = Math.max(0, 100 - td.alignmentDeg * 5);
+  const centerlineScore = Math.max(0, 100 - td.centerlineOffset * 12);
+  const runwayAlignment = Math.round(
+    Math.max(0, Math.min(100, alignScore * 0.6 + centerlineScore * 0.4)),
+  );
 
   const total = Math.round(
     speed * 0.4 + landingSmoothness * 0.3 + runwayAlignment * 0.3,
@@ -453,6 +598,23 @@ export function mpsToKts(mps: number): number {
   return mps * 1.94384;
 }
 
+export function crashReasonMessage(reason: CrashReason): string {
+  switch (reason) {
+    case "hard_landing":
+      return "Hard landing — the gear couldn't take the impact.";
+    case "off_runway":
+      return "You put it down off the runway.";
+    case "wrong_runway":
+      return "Wrong airfield — that was the departure strip.";
+    case "too_fast":
+      return "Too fast on touchdown — the airframe didn't survive.";
+    case "missed_course":
+      return "You skipped the course gates. Fly through every ring.";
+    case "crooked":
+      return "Too much crab on touchdown — the gear collapsed.";
+  }
+}
+
 /** Mission step index (1-based) for HUD progress display. */
 export function missionStep(phase: FlightPhase): number {
   switch (phase) {
@@ -465,6 +627,8 @@ export function missionStep(phase: FlightPhase): number {
     case "rollout":
       return 4;
     case "complete":
+      return 4;
+    case "crashed":
       return 4;
     default:
       return 1;
