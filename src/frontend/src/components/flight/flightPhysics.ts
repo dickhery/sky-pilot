@@ -8,7 +8,14 @@ export const WHEEL_HEIGHT = 1.05;
 /** World Y when the plane is sitting on the runway. */
 export const GROUND_CONTACT_Y = RUNWAY_ELEVATION + WHEEL_HEIGHT;
 /** Half-width of runway corridor used for landing detection (meters). */
-export const RUNWAY_HALF_WIDTH = 6;
+export const RUNWAY_HALF_WIDTH = 6.5;
+/** Airspeed (kt) at which the HUD prompts rotation. */
+export const ROTATE_SPEED_KTS = 55;
+/** Target approach speed shown in the HUD (kt). */
+export const APPROACH_SPEED_KTS = 70;
+
+const G = 9.81;
+const _forward = new THREE.Vector3();
 
 export type LandingHint =
   | null
@@ -22,6 +29,7 @@ export type LandingHint =
  */
 export interface FlightState {
   position: THREE.Vector3;
+  /** Euler order YXZ: heading (y), pitch (x, +nose-up), bank (z, −right-wing-down). */
   rotation: THREE.Euler;
   speed: number;
   verticalSpeed: number;
@@ -51,15 +59,19 @@ export interface SceneLayout {
   landingEnd: THREE.Vector3;
 }
 
+export function createInitialRotation(heading = 0): THREE.Euler {
+  return new THREE.Euler(0, heading, 0, "YXZ");
+}
+
 export function buildSceneLayout(): SceneLayout {
-  const departureStart = new THREE.Vector3(0, GROUND_CONTACT_Y, 40);
-  const departureEnd = new THREE.Vector3(0, RUNWAY_ELEVATION, -60);
+  const departureStart = new THREE.Vector3(0, GROUND_CONTACT_Y, 85);
+  const departureEnd = new THREE.Vector3(0, RUNWAY_ELEVATION, -85);
   const departureHeading = 0;
 
-  const waypoint = new THREE.Vector3(-30, 55, -120);
+  const waypoint = new THREE.Vector3(-28, 62, -145);
 
-  const landingThreshold = new THREE.Vector3(20, RUNWAY_ELEVATION, -260);
-  const landingEnd = new THREE.Vector3(20, RUNWAY_ELEVATION, -360);
+  const landingThreshold = new THREE.Vector3(22, RUNWAY_ELEVATION, -290);
+  const landingEnd = new THREE.Vector3(22, RUNWAY_ELEVATION, -430);
   const landingHeading = 0;
 
   return {
@@ -71,6 +83,24 @@ export function buildSceneLayout(): SceneLayout {
     landingEnd,
     landingHeading,
   };
+}
+
+/** Level-flight cruise speed used by the energy model and scoring par time. */
+export function cruiseSpeedMps(plane: Plane): number {
+  return plane.topSpeedKts * 0.48;
+}
+
+/** Stall speed in m/s — Cessna is slower and more forgiving. */
+export function stallSpeedMps(plane: Plane): number {
+  return 22 + (1 - plane.stability) * 10;
+}
+
+function rotateSpeedMps(plane: Plane): number {
+  return stallSpeedMps(plane) * 1.12;
+}
+
+function maxBank(plane: Plane): number {
+  return 0.85 + plane.agility * 0.45;
 }
 
 /** True when position is over the landing runway corridor. */
@@ -103,33 +133,31 @@ export function isOnDepartureRunway(
   );
 }
 
+function isOnAnyRunway(position: THREE.Vector3, layout: SceneLayout): boolean {
+  return (
+    isOnLandingRunway(position, layout) || isOnDepartureRunway(position, layout)
+  );
+}
+
 export function distanceToLandingThreshold(
   position: THREE.Vector3,
   layout: SceneLayout,
 ): number {
-  const threshold = layout.landingThreshold.clone();
-  threshold.y = position.y;
-  return position.distanceTo(threshold);
-}
-
-function rotationSpeed(plane: Plane): number {
-  return 9 + plane.agility * 2;
-}
-
-function liftoffSpeed(plane: Plane): number {
-  return 11 + plane.topSpeedKts * 0.02;
-}
-
-function stallSpeed(plane: Plane): number {
-  return 7 + plane.stability * 2;
-}
-
-function rolloutCompleteSpeed(): number {
-  return 10; // ~19 kt — taxi speed
+  const dx = position.x - layout.landingThreshold.x;
+  const dz = position.z - layout.landingThreshold.z;
+  return Math.hypot(dx, dz);
 }
 
 /**
  * One physics integration step. Mutates `state` in place.
+ *
+ * Model (game-tuned, physically motivated):
+ * - Throttle is thrust, not a speed target. Drag grows with V².
+ * - Pitching up trades airspeed for altitude (and the reverse).
+ * - A/D banks the wings in the air; the aircraft turns from that bank
+ *   (coordinated). On the ground A/D steers the nosewheel.
+ * - Lift comes from angle of attack and dynamic pressure; too slow or
+ *   too much nose-up stalls and the nose drops.
  */
 export function stepFlight(
   state: FlightState,
@@ -139,138 +167,217 @@ export function stepFlight(
   dt: number,
 ): void {
   if (state.finished) return;
-  state.elapsed += dt;
+  const step = Math.min(dt, 0.05);
+  state.elapsed += step;
   state.landingHint = null;
 
-  const agility = 0.85 + plane.agility * 1.5;
-  const stability = 0.55 + plane.stability * 0.85;
-  const maxSpeed = 22 + plane.topSpeedKts * 0.2;
-  const vr = rotationSpeed(plane);
-  const vlo = liftoffSpeed(plane);
-  const vstall = stallSpeed(plane);
+  if (state.rotation.order !== "YXZ") {
+    state.rotation.order = "YXZ";
+  }
 
-  const brakeFactor = input.brakes ? 0.3 : 1;
-  const targetSpeed = maxSpeed * input.throttle * brakeFactor;
-  const accelRate = input.brakes ? 2.5 : 1.6;
-  state.speed += (targetSpeed - state.speed) * Math.min(1, dt * accelRate);
-  state.speed = Math.max(0, state.speed);
-
+  const agility = 0.7 + plane.agility * 1.15;
+  const stability = 0.45 + plane.stability * 0.9;
+  const vCruise = cruiseSpeedMps(plane);
+  const vStall = stallSpeedMps(plane);
+  const vRotate = rotateSpeedMps(plane);
   const groundY = GROUND_CONTACT_Y;
-  const airborneThreshold = groundY + 0.12;
+
+  const pitch = state.rotation.x;
+  const bank = state.rotation.z;
+
   const wasAirborne = state.airborne;
+  const airborneThreshold = groundY + 0.14;
   state.airborne = state.position.y > airborneThreshold;
   if (state.airborne) state.hasFlown = true;
 
+  // ── Attitude ──────────────────────────────────────────────────────────
   if (!state.airborne) {
-    // Ground roll — strong braking, rudder steering.
-    if (input.brakes) {
-      state.speed = Math.max(0, state.speed - dt * 14);
-    }
+    // Nosewheel / rudder steering. Bank stays on the ground.
+    const steerAuth = THREE.MathUtils.clamp(state.speed / 6, 0.15, 1.15);
+    state.rotation.y -= input.roll * agility * 0.7 * steerAuth * step;
+    state.rotation.z += (0 - bank) * Math.min(1, step * 8);
 
-    state.rotation.y -= input.roll * agility * 0.55 * dt;
-    state.rotation.z *= 1 - Math.min(1, dt * 5);
-
-    if (state.speed >= vr * 0.75 || state.phase === "rollout") {
-      state.rotation.x += input.pitch * agility * 0.55 * dt;
-      state.rotation.x = THREE.MathUtils.clamp(state.rotation.x, -0.1, 0.55);
+    // Rotation (nose up) only once there is airflow over the elevator.
+    if (state.speed >= vRotate * 0.55 || state.phase === "rollout") {
+      state.rotation.x += input.pitch * agility * 0.42 * step;
+      state.rotation.x = THREE.MathUtils.clamp(state.rotation.x, -0.04, 0.28);
     } else {
-      state.rotation.x *= 1 - Math.min(1, dt * 3);
+      state.rotation.x += (0 - pitch) * Math.min(1, step * 4);
     }
+  } else {
+    const pitchRate = agility * 0.38;
+    const rollRate = agility * 1.05;
+    state.rotation.x += input.pitch * pitchRate * step;
+    state.rotation.x = THREE.MathUtils.clamp(state.rotation.x, -0.55, 0.72);
+    // D = +roll → right wing down → negative Z in this convention.
+    state.rotation.z -= input.roll * rollRate * step;
+    const bankLimit = maxBank(plane);
+    state.rotation.z = THREE.MathUtils.clamp(
+      state.rotation.z,
+      -bankLimit,
+      bankLimit,
+    );
 
-    if (state.phase === "takeoff") {
-      state.position.x += (layout.departureStart.x - state.position.x) * 0.08;
+    // Wings-level stability when the stick is released.
+    if (input.roll === 0) {
+      state.rotation.z *= 1 - Math.min(1, step * (0.55 + stability * 0.7));
     }
+    // Attitude hold: released elevator keeps the current pitch.
 
-    const dynamicPressure = state.speed * state.speed;
-    const pitchLift =
-      Math.sin(state.rotation.x) * dynamicPressure * 0.0045 +
-      dynamicPressure * 0.0009;
-    const groundEffect = state.position.y < groundY + 2 ? 1.4 : 1;
-    const netLift = pitchLift * groundEffect - 9.8 * 0.12;
+    // Coordinated turn: yaw rate comes from bank, not from aileron input.
+    // Turn is slightly faster than real-world so the compact world stays fun.
+    const speedForTurn = Math.max(state.speed, 10);
+    // Right bank (z < 0) must decrease heading so the nose tracks right.
+    const yawRate = (Math.tan(state.rotation.z) * G * 1.15) / speedForTurn;
+    state.rotation.y += yawRate * step;
+  }
 
-    if (
+  // ── Energy: thrust, drag, gravity along the flight path ───────────────
+  const pathAngle = Math.atan2(
+    state.verticalSpeed,
+    Math.max(state.speed, 0.35),
+  );
+  const aoa = state.rotation.x - pathAngle;
+
+  const throttle = THREE.MathUtils.clamp(input.throttle, 0, 1);
+  // Static thrust-to-weight is sporty so the short runways still work.
+  const thrustAccel = (5.1 + plane.agility * 1.6) * throttle;
+  const q = 0.5 * state.speed * state.speed;
+
+  const stallAoa = 0.26 + plane.stability * 0.04;
+  let cl = 0.22 + aoa * 4.4;
+  let stalled = false;
+  if (aoa > stallAoa) {
+    stalled = true;
+    const over = aoa - stallAoa;
+    cl = 0.22 + stallAoa * 4.4 - over * 11;
+  }
+  if (state.speed < vStall && state.airborne) {
+    stalled = true;
+    cl *= Math.max(0.15, state.speed / vStall);
+  }
+  cl = THREE.MathUtils.clamp(cl, -0.7, 1.55);
+
+  const heightAgl = state.position.y - groundY;
+  const groundEffect = heightAgl < 3.5 ? 1 + (1 - heightAgl / 3.5) * 0.28 : 1;
+
+  // Calibrated so ~1G at cruise with a few degrees of AoA.
+  const liftAccel = q * cl * 0.0165 * groundEffect;
+
+  const cd0 = 0.0022 + (1 - plane.agility) * 0.00035;
+  const induced = (0.85 * cl * cl) / Math.max(state.speed * state.speed, 40);
+  const parasite = cd0 * state.speed * state.speed;
+  const gravityAlongPath = G * Math.sin(pathAngle);
+
+  let accel = thrustAccel - parasite - induced - gravityAlongPath;
+  if (!state.airborne) {
+    const onPaved = isOnAnyRunway(state.position, layout);
+    const rolling = onPaved ? 0.55 : 2.4;
+    const braking = input.brakes ? (onPaved ? 11 : 7) : 0;
+    accel -= rolling + braking;
+  } else if (input.brakes) {
+    // Airbrake / extra drag — useful on final.
+    accel -= 2.2;
+  }
+
+  state.speed = Math.max(0, state.speed + accel * step);
+  if (!state.airborne && input.brakes) {
+    state.speed = Math.max(0, state.speed - step * 2);
+  }
+
+  // ── Vertical channel ──────────────────────────────────────────────────
+  if (!state.airborne) {
+    const canRotate =
       state.phase !== "rollout" &&
-      state.speed >= vlo &&
-      (input.pitch > 0.04 || state.rotation.x > 0.1)
-    ) {
-      state.verticalSpeed = Math.max(0.6, netLift * 0.4);
-      state.position.y += state.verticalSpeed * dt;
+      state.speed >= vRotate * 0.92 &&
+      (input.pitch > 0.05 || state.rotation.x > 0.09);
+
+    const liftExceedsWeight = liftAccel > G * 0.96;
+    if (canRotate && liftExceedsWeight) {
+      state.verticalSpeed = Math.max(0.45, (liftAccel - G) * 0.35);
+      state.position.y += state.verticalSpeed * step;
       if (state.position.y > airborneThreshold) {
         state.airborne = true;
+        state.hasFlown = true;
       }
     } else {
       state.verticalSpeed = 0;
       state.position.y = groundY;
     }
   } else {
-    // Airborne — responsive pitch/roll with coordinated turns.
-    state.rotation.x += input.pitch * agility * 1.1 * dt;
-    state.rotation.x = THREE.MathUtils.clamp(state.rotation.x, -0.8, 0.7);
-    state.rotation.z += input.roll * agility * 0.85 * dt;
-    state.rotation.z = THREE.MathUtils.clamp(state.rotation.z, -0.8, 0.8);
-    state.rotation.y -= input.roll * agility * 0.6 * dt;
+    const bankRad = state.rotation.z;
+    const verticalLift =
+      liftAccel * Math.cos(bankRad) * Math.cos(state.rotation.x);
+    const thrustUp = thrustAccel * Math.sin(state.rotation.x);
+    let vsAccel = verticalLift + thrustUp - G;
 
-    const dynamicPressure = state.speed * state.speed;
-    const pitchLift = Math.sin(state.rotation.x) * state.speed * 0.1;
-    const speedLift = dynamicPressure * 0.0013;
-    const stallPenalty =
-      state.speed < vstall ? (vstall - state.speed) * 0.4 : 0;
-
-    state.verticalSpeed +=
-      (pitchLift + speedLift - stallPenalty - state.verticalSpeed * 0.06) *
-      Math.min(1, dt * (1.5 / stability));
-
-    if (state.rotation.x < 0.05 && state.verticalSpeed > -2.5) {
-      state.verticalSpeed -= 1.6 * dt;
+    if (stalled) {
+      // Nose drop and extra sink — recoverable by lowering the nose / adding power.
+      state.rotation.x -= step * (0.55 + Math.max(0, aoa) * 0.8);
+      vsAccel -= 3.2;
     }
 
-    state.position.y += state.verticalSpeed * dt;
+    // Light damping so the ride isn't springy.
+    vsAccel -= state.verticalSpeed * 0.12;
+    state.verticalSpeed += vsAccel * step;
+    state.position.y += state.verticalSpeed * step;
 
     if (state.position.y <= groundY) {
       const descentAtContact = Math.max(0, -state.verticalSpeed);
-      state.position.y = groundY;
-      state.airborne = false;
-      state.verticalSpeed = 0;
-      state.rotation.x *= 0.2;
-      state.rotation.z *= 0.2;
+      const hard = descentAtContact > 9;
 
-      const onLanding = isOnLandingRunway(state.position, layout);
-      const onDeparture = isOnDepartureRunway(state.position, layout);
+      if (hard && descentAtContact < 16) {
+        // Bounce rather than sticking a crash-rate arrival.
+        state.position.y = groundY + 0.2;
+        state.verticalSpeed = descentAtContact * 0.28;
+        state.speed *= 0.82;
+        state.rotation.x *= 0.55;
+      } else {
+        state.position.y = groundY;
+        state.airborne = false;
+        state.verticalSpeed = 0;
+        state.rotation.x *= 0.18;
+        state.rotation.z *= 0.15;
 
-      if (onLanding && wasAirborne && !state.touchdown) {
-        const alignmentDeg = Math.abs(
-          THREE.MathUtils.radToDeg(state.rotation.y - layout.landingHeading),
-        );
-        state.touchdown = {
-          descentRate: descentAtContact,
-          alignmentDeg,
-          speed: state.speed,
-          centerlineOffset: Math.abs(
-            state.position.x - layout.landingThreshold.x,
-          ),
-        };
-        state.phase = "rollout";
-        state.landingHint = "brake_to_finish";
-      } else if (wasAirborne && state.hasFlown) {
-        if (onDeparture) {
-          state.landingHint = "wrong_runway";
-        } else if (state.phase === "landing" || state.phase === "rollout") {
-          state.landingHint = "off_corridor";
+        const onLanding = isOnLandingRunway(state.position, layout);
+        const onDeparture = isOnDepartureRunway(state.position, layout);
+
+        if (onLanding && wasAirborne && !state.touchdown) {
+          if (state.speed > vCruise * 0.85) {
+            state.landingHint = "too_fast";
+            state.speed *= 0.7;
+          }
+          const alignmentDeg = Math.abs(
+            THREE.MathUtils.radToDeg(state.rotation.y - layout.landingHeading),
+          );
+          state.touchdown = {
+            descentRate: descentAtContact,
+            alignmentDeg,
+            speed: state.speed,
+            centerlineOffset: Math.abs(
+              state.position.x - layout.landingThreshold.x,
+            ),
+          };
+          state.phase = "rollout";
+          state.landingHint = "brake_to_finish";
+        } else if (wasAirborne && state.hasFlown) {
+          if (onDeparture) {
+            state.landingHint = "wrong_runway";
+          } else if (state.phase === "landing" || state.phase === "rollout") {
+            state.landingHint = "off_corridor";
+          }
+          state.speed *= 0.5;
         }
-        state.speed *= 0.55;
       }
     }
   }
 
-  // Forward motion along heading.
-  const forward = new THREE.Vector3(
-    Math.sin(state.rotation.y),
-    0,
-    Math.cos(state.rotation.y),
-  ).multiplyScalar(-1);
-  state.position.addScaledVector(forward, state.speed * dt);
+  // Forward along heading. The aircraft always tracks its nose (no sideslip).
+  const heading = state.rotation.y;
+  _forward.set(-Math.sin(heading), 0, -Math.cos(heading));
+  state.position.addScaledVector(_forward, state.speed * step);
 
-  // Phase transitions.
+  // ── Phase transitions ─────────────────────────────────────────────────
   if (state.phase === "takeoff" && state.airborne) {
     state.phase = "cruising";
   }
@@ -279,28 +386,23 @@ export function stepFlight(
     const nearWaypoint = state.position.distanceTo(layout.waypoint) < 55;
     const nearLanding =
       distanceToLandingThreshold(state.position, layout) < 200;
-    const onApproachPath = state.position.z < -150;
+    const onApproachPath = state.position.z < -160;
     if (nearWaypoint || nearLanding || onApproachPath) {
       state.phase = "landing";
     }
   }
 
-  // Rollout: brake to taxi speed to finish the flight.
   if (state.phase === "rollout" && !state.airborne) {
     if (input.brakes) {
-      state.speed = Math.max(0, state.speed - dt * 18);
+      state.speed = Math.max(0, state.speed - step * 16);
     }
-    if (state.speed <= rolloutCompleteSpeed()) {
+    if (state.speed <= 10) {
       state.phase = "complete";
       state.finished = true;
       state.landingHint = null;
     } else {
       state.landingHint = "brake_to_finish";
     }
-  }
-
-  if (input.roll === 0 && state.airborne) {
-    state.rotation.z *= 1 - Math.min(1, dt * 2);
   }
 }
 
@@ -315,7 +417,7 @@ export function computeScore(
   total: number;
 } {
   const routeLen = layout.departureStart.distanceTo(layout.landingEnd);
-  const parTime = routeLen / (22 + plane.topSpeedKts * 0.2) / 0.65;
+  const parTime = routeLen / cruiseSpeedMps(plane) / 0.62;
   const speedRatio = Math.min(1.5, state.elapsed / parTime);
   const speed = Math.max(
     0,

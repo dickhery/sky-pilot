@@ -1,5 +1,5 @@
 import type { Weather } from "@/types/game";
-import { Cloud, Clouds, Sky, Stars } from "@react-three/drei";
+import { Cloud, Clouds, ContactShadows, Sky, Stars } from "@react-three/drei";
 import { useMemo } from "react";
 import * as THREE from "three";
 
@@ -10,16 +10,17 @@ interface EnvironmentProps {
 /**
  * Sky + lighting environment driven by the flight plan's weather.
  *
- * - Daytime: bright drei <Sky> with a high sun and warm directional light.
- * - Nighttime: dark sky, drei <Stars>, cool dim lighting, runway strobes
- *   are handled by the runway mesh itself.
- * - PartlyCloudy: overcast — drei <Clouds> layer + soft ambient/directional.
- *
- * Kept intentionally lightweight (no HDRI fetch) for performance.
+ * Kept lightweight (no HDRI fetch) so the frontend stays cheap to host
+ * and Caffeine reimport does not pick up extra network assets.
  */
 export function Environment({ weather }: EnvironmentProps) {
   const sunPosition = useMemo<[number, number, number]>(
-    () => (weather === "Nighttime" ? [-0.3, 0.05, -1] : [0.6, 0.8, 0.4]),
+    () =>
+      weather === "Nighttime"
+        ? [-40, 8, -80]
+        : weather === "PartlyCloudy"
+          ? [30, 90, 40]
+          : [70, 110, 45],
     [weather],
   );
 
@@ -28,98 +29,146 @@ export function Environment({ weather }: EnvironmentProps) {
       {weather === "Daytime" && (
         <>
           <Sky
-            distance={4500}
+            distance={450000}
             sunPosition={sunPosition}
-            inclination={0.52}
-            azimuth={0.25}
-            turbidity={4}
-            rayleigh={1.5}
+            inclination={0.49}
+            azimuth={0.22}
+            turbidity={3.2}
+            rayleigh={0.85}
             mieCoefficient={0.004}
-            mieDirectionalG={0.82}
+            mieDirectionalG={0.85}
           />
-          <fog attach="fog" args={["#b8d4e8", 120, 480]} />
-        </>
-      )}
-
-      {weather === "Nighttime" && (
-        <>
-          <color attach="background" args={["#05070f"]} />
-          <fog attach="fog" args={["#05070f", 60, 320]} />
-          <Stars
-            radius={200}
-            depth={50}
-            count={1800}
-            factor={4}
-            saturation={0}
-            fade
-            speed={0.5}
-          />
-        </>
-      )}
-
-      {weather === "PartlyCloudy" && (
-        <>
-          <color attach="background" args={["#9aa6b5"]} />
-          <fog attach="fog" args={["#9aa6b5", 80, 360]} />
-          <Clouds material={THREE.MeshBasicMaterial} limit={40}>
+          <fog attach="fog" args={["#c5dceb", 180, 780]} />
+          <Clouds material={THREE.MeshLambertMaterial} limit={24}>
             <Cloud
-              seed={7}
-              segments={28}
-              bounds={[120, 12, 120]}
-              volume={26}
-              opacity={0.7}
-              color="#c4ccd6"
-              position={[0, 38, -40]}
+              seed={4}
+              segments={16}
+              bounds={[80, 8, 50]}
+              volume={14}
+              opacity={0.32}
+              color="#f4f7fb"
+              position={[-90, 55, -180]}
             />
             <Cloud
-              seed={21}
-              segments={20}
-              bounds={[100, 8, 100]}
-              volume={18}
-              opacity={0.55}
-              color="#b3bcc8"
-              position={[-60, 30, 40]}
+              seed={18}
+              segments={14}
+              bounds={[70, 7, 40]}
+              volume={10}
+              opacity={0.26}
+              color="#eef2f6"
+              position={[110, 48, -80]}
             />
           </Clouds>
         </>
       )}
 
-      {/* Lighting tuned per weather */}
-      {weather === "Daytime" && (
-        <>
-          <ambientLight intensity={0.55} color="#eaf4ff" />
-          <directionalLight
-            position={sunPosition}
-            intensity={1.4}
-            color="#fff4e0"
-            castShadow={false}
-          />
-          <hemisphereLight args={["#bfe3ff", "#3a4a5a", 0.4]} />
-        </>
-      )}
-
       {weather === "Nighttime" && (
         <>
-          <ambientLight intensity={0.18} color="#243049" />
-          <directionalLight
-            position={sunPosition}
-            intensity={0.25}
-            color="#6f86b8"
+          <color attach="background" args={["#050814"]} />
+          <fog attach="fog" args={["#050814", 80, 420]} />
+          <Stars
+            radius={280}
+            depth={60}
+            count={2200}
+            factor={3.6}
+            saturation={0.15}
+            fade
+            speed={0.35}
           />
-          <hemisphereLight args={["#1a2440", "#05070f", 0.25]} />
         </>
       )}
 
       {weather === "PartlyCloudy" && (
         <>
-          <ambientLight intensity={0.7} color="#cfd6de" />
-          <directionalLight
-            position={[0.2, 0.9, 0.5]}
-            intensity={0.6}
-            color="#e8edf2"
+          <Sky
+            distance={450000}
+            sunPosition={sunPosition}
+            inclination={0.55}
+            azimuth={0.2}
+            turbidity={8}
+            rayleigh={0.45}
+            mieCoefficient={0.008}
+            mieDirectionalG={0.7}
           />
-          <hemisphereLight args={["#bcc4ce", "#5a6470", 0.5]} />
+          <fog attach="fog" args={["#9aa8b6", 120, 560]} />
+          <Clouds material={THREE.MeshLambertMaterial} limit={36}>
+            <Cloud
+              seed={7}
+              segments={22}
+              bounds={[140, 14, 120]}
+              volume={24}
+              opacity={0.62}
+              color="#c8d0d8"
+              position={[0, 42, -50]}
+            />
+            <Cloud
+              seed={21}
+              segments={16}
+              bounds={[100, 10, 90]}
+              volume={16}
+              opacity={0.48}
+              color="#b7c0ca"
+              position={[-70, 34, 30]}
+            />
+          </Clouds>
         </>
+      )}
+
+      {weather === "Daytime" && (
+        <>
+          <ambientLight intensity={0.42} color="#e7f1ff" />
+          <hemisphereLight args={["#b7d8f2", "#4a5a3a", 0.55]} />
+          <directionalLight
+            position={sunPosition}
+            intensity={1.65}
+            color="#fff3d8"
+            castShadow
+            shadow-mapSize-width={1024}
+            shadow-mapSize-height={1024}
+            shadow-camera-far={420}
+            shadow-camera-left={-90}
+            shadow-camera-right={90}
+            shadow-camera-top={90}
+            shadow-camera-bottom={-90}
+            shadow-bias={-0.0004}
+          />
+        </>
+      )}
+
+      {weather === "Nighttime" && (
+        <>
+          <ambientLight intensity={0.12} color="#1c2840" />
+          <hemisphereLight args={["#1a2848", "#05070c", 0.22]} />
+          <directionalLight
+            position={sunPosition}
+            intensity={0.22}
+            color="#8aa0c8"
+          />
+        </>
+      )}
+
+      {weather === "PartlyCloudy" && (
+        <>
+          <ambientLight intensity={0.55} color="#d5dbe2" />
+          <hemisphereLight args={["#c5ccd4", "#5a6458", 0.45]} />
+          <directionalLight
+            position={sunPosition}
+            intensity={0.7}
+            color="#e6ebf0"
+            castShadow={false}
+          />
+        </>
+      )}
+
+      {weather !== "Nighttime" && (
+        <ContactShadows
+          position={[0, 0.01, -40]}
+          opacity={0.35}
+          scale={220}
+          blur={2.4}
+          far={12}
+          frames={1}
+        />
       )}
     </>
   );

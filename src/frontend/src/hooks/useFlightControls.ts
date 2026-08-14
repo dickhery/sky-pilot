@@ -72,7 +72,7 @@ export function useFlightControls(): FlightControls {
       a.pitch += (t.pitch - a.pitch) * smooth;
       a.roll += (t.roll - a.roll) * smooth;
 
-      const ramp = 0.032;
+      const ramp = 0.018;
       const targetUp =
         keys.current.has("ShiftLeft") || keys.current.has("ShiftRight");
       const targetDown =

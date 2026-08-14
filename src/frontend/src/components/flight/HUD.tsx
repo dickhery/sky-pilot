@@ -1,4 +1,8 @@
-import type { LandingHint } from "@/components/flight/flightPhysics";
+import {
+  APPROACH_SPEED_KTS,
+  type LandingHint,
+  ROTATE_SPEED_KTS,
+} from "@/components/flight/flightPhysics";
 import type { FlightPhase } from "@/types/game";
 import {
   CheckCircle2,
@@ -177,28 +181,32 @@ export function HUD({
             dataOcid="flight.hud.vertical_speed"
           />
         )}
-        {phase === "takeoff" && !airborne && airspeed >= 45 && (
-          <div className="glow-caution hud-scanlines flex items-center gap-1.5 rounded-md border border-accent/50 bg-accent/15 px-2.5 py-1.5 backdrop-blur">
-            <TriangleAlert
-              className="h-3.5 w-3.5 text-accent"
-              aria-hidden="true"
-            />
-            <span className="hud-label text-[10px] text-accent">
-              Rotate — pull up (W)
-            </span>
-          </div>
-        )}
-        {phase === "landing" && airborne && airspeed > 85 && (
-          <div className="glow-caution hud-scanlines flex items-center gap-1.5 rounded-md border border-accent/50 bg-accent/15 px-2.5 py-1.5 backdrop-blur">
-            <TriangleAlert
-              className="h-3.5 w-3.5 text-accent"
-              aria-hidden="true"
-            />
-            <span className="hud-label text-[10px] text-accent">
-              Slow to 65 kt (Ctrl) before landing
-            </span>
-          </div>
-        )}
+        {phase === "takeoff" &&
+          !airborne &&
+          airspeed >= ROTATE_SPEED_KTS - 8 && (
+            <div className="glow-caution hud-scanlines flex items-center gap-1.5 rounded-md border border-accent/50 bg-accent/15 px-2.5 py-1.5 backdrop-blur">
+              <TriangleAlert
+                className="h-3.5 w-3.5 text-accent"
+                aria-hidden="true"
+              />
+              <span className="hud-label text-[10px] text-accent">
+                Rotate — pull up (W)
+              </span>
+            </div>
+          )}
+        {phase === "landing" &&
+          airborne &&
+          airspeed > APPROACH_SPEED_KTS + 15 && (
+            <div className="glow-caution hud-scanlines flex items-center gap-1.5 rounded-md border border-accent/50 bg-accent/15 px-2.5 py-1.5 backdrop-blur">
+              <TriangleAlert
+                className="h-3.5 w-3.5 text-accent"
+                aria-hidden="true"
+              />
+              <span className="hud-label text-[10px] text-accent">
+                Slow to {APPROACH_SPEED_KTS} kt (Ctrl) before landing
+              </span>
+            </div>
+          )}
       </div>
 
       {/* Top-right: throttle + brakes */}

@@ -33,8 +33,8 @@ const PHASES: Phase[] = [
       "Accelerate down the runway, build airspeed, and rotate to lift off.",
     details: [
       "Hold Shift to spool the throttle up — watch the airspeed indicator climb past rotation speed.",
-      "Keep the wings level with A / D as the plane accelerates down the centreline.",
-      "Pull back on W (or ↑) to rotate — lift the nose smoothly off the runway.",
+      "On the ground A / D steers the nosewheel — keep the nose on the centreline.",
+      "Pull back on W (or ↑) to rotate at about 55 kt — lift the nose smoothly.",
       "Once airborne, ease the nose down slightly to build speed before climbing out.",
     ],
   },
@@ -45,8 +45,8 @@ const PHASES: Phase[] = [
     summary: "Follow the on-screen guidance toward the destination waypoint.",
     details: [
       "A cyan horizon marker points toward the next waypoint — keep it near the top of the HUD.",
-      "Bank gently with A / D to turn; coordinated turns hold altitude more cleanly.",
-      "Trim pitch with W / S to hold a steady climb or cruise attitude.",
+      "Bank with A / D to turn — the aircraft yaws into the bank on its own.",
+      "Hold back-pressure (W) in a turn or you will lose altitude. Pitch trades speed for height.",
       "Watch the altitude tape and airspeed — stay within the green bands for a clean run.",
     ],
   },

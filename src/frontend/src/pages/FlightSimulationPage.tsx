@@ -3,11 +3,14 @@ import { FlightScene } from "@/components/flight/FlightScene";
 import { HUD } from "@/components/flight/HUD";
 import { ResultsScreen } from "@/components/flight/ResultsScreen";
 import {
+  APPROACH_SPEED_KTS,
   type FlightState,
   type LandingHint,
+  ROTATE_SPEED_KTS,
   bearing,
   buildSceneLayout,
   computeScore,
+  createInitialRotation,
   distanceToLandingThreshold,
   missionStep,
 } from "@/components/flight/flightPhysics";
@@ -63,7 +66,7 @@ export function FlightSimulationPage() {
   // Initialize flight state once.
   const flightState = useRef<FlightState>({
     position: layout.departureStart.clone(),
-    rotation: new THREE.Euler(0, layout.departureHeading, 0),
+    rotation: createInitialRotation(layout.departureHeading),
     speed: 0,
     verticalSpeed: 0,
     phase: "takeoff",
@@ -233,7 +236,7 @@ export function FlightSimulationPage() {
   const handleRetry = () => {
     flightState.current = {
       position: layout.departureStart.clone(),
-      rotation: new THREE.Euler(0, layout.departureHeading, 0),
+      rotation: createInitialRotation(layout.departureHeading),
       speed: 0,
       verticalSpeed: 0,
       phase: "takeoff",
@@ -309,8 +312,7 @@ function getMissionBrief(
           }
         : {
             objective: "Take off from the departure runway",
-            subObjective:
-              "Hold Shift for power → at 55 kt pull up (W) to rotate",
+            subObjective: `Hold Shift for power → at ${ROTATE_SPEED_KTS} kt pull up (W) to rotate`,
           };
     case "cruising":
       return {
@@ -320,8 +322,7 @@ function getMissionBrief(
     case "landing":
       return {
         objective: `Land on ${landingName}`,
-        subObjective:
-          "Turn right toward the second runway · heading 000° · slow to 65 kt · gentle descent",
+        subObjective: `Bank right toward the second runway · heading 000° · slow to ${APPROACH_SPEED_KTS} kt · flare with W`,
       };
     case "rollout":
       return {

@@ -51,14 +51,14 @@ const BINDINGS: ControlBinding[] = [
   {
     input: "A",
     alt: "←",
-    action: "Roll left — bank the port wing down",
+    action: "Bank left — left wing down, aircraft turns left",
     icon: ArrowLeft,
     group: "Roll",
   },
   {
     input: "D",
     alt: "→",
-    action: "Roll right — bank the starboard wing down",
+    action: "Bank right — right wing down, aircraft turns right",
     icon: ArrowRight,
     group: "Roll",
   },
