@@ -5,13 +5,23 @@ import { useEffect, useRef } from "react";
 export interface FlightAudioOptions {
   /** Kill engine + wind (results / crash). */
   engineMuted: boolean;
-  /** Kill the route soundtrack. */
+  /** Pause the route soundtrack. */
   musicMuted: boolean;
-  /** Flight-plan id 1–6 picks a distinct loop. */
+  /** Flight-plan id 1–6 picks a distinct CC0 track. */
   planId: number;
 }
 
 const MUSIC_PREF_KEY = "sky-pilot-music";
+const MUSIC_VOLUME = 0.46;
+
+const TRACKS: Record<number, string> = {
+  1: "/assets/music/coast.m4a",
+  2: "/assets/music/ridge.m4a",
+  3: "/assets/music/harbor.m4a",
+  4: "/assets/music/city.m4a",
+  5: "/assets/music/valley.m4a",
+  6: "/assets/music/storm.m4a",
+};
 
 export function readMusicPref(): boolean {
   try {
@@ -30,39 +40,67 @@ export function writeMusicPref(on: boolean): void {
 }
 
 /**
- * Procedural engine + per-route soundtrack via the Web Audio API.
- * No sample files — the Caffeine asset canister stays small and
- * reimport stays offline-friendly.
+ * Engine rumble is still synthesized (tiny). Route music is real CC0
+ * loops in /assets/music so it is actually audible in-flight.
  */
 export function useFlightAudio(
   flightState: React.MutableRefObject<FlightState>,
   axes: React.MutableRefObject<{ throttle: number }>,
   options: FlightAudioOptions,
 ): void {
-  const audio = useRef<AudioKit | null>(null);
+  const engine = useRef<EngineKit | null>(null);
+  const music = useRef<HTMLAudioElement | null>(null);
   const lastAirborne = useRef(false);
   const optionsRef = useRef(options);
   optionsRef.current = options;
+  const unlocked = useRef(false);
 
   useEffect(() => {
-    let raf = 0;
-    let started = false;
+    const el = new Audio();
+    el.loop = true;
+    el.preload = "auto";
+    el.volume = MUSIC_VOLUME;
+    el.setAttribute("playsinline", "true");
+    music.current = el;
 
-    const start = () => {
-      if (started) return;
-      started = true;
-      const kit = createKit();
-      if (!kit) return;
-      audio.current = kit;
-      void kit.ctx.resume();
+    let raf = 0;
+
+    const unlock = () => {
+      unlocked.current = true;
+      if (!engine.current) {
+        engine.current = createEngine();
+      }
+      void engine.current?.ctx.resume();
+      syncMusic();
     };
 
-    const onGesture = () => start();
-    window.addEventListener("keydown", onGesture, { once: true });
-    window.addEventListener("pointerdown", onGesture, { once: true });
+    const syncMusic = () => {
+      const elNow = music.current;
+      if (!elNow) return;
+      const opts = optionsRef.current;
+      const src = TRACKS[opts.planId] ?? TRACKS[1];
+      const want = src && !opts.musicMuted;
+      if (elNow.dataset.track !== src) {
+        elNow.src = src;
+        elNow.dataset.track = src;
+        elNow.load();
+      }
+      if (!want) {
+        elNow.pause();
+        return;
+      }
+      if (!unlocked.current) return;
+      const play = elNow.play();
+      if (play) void play.catch(() => {});
+    };
+
+    const onGesture = () => unlock();
+    window.addEventListener("pointerdown", onGesture);
+    window.addEventListener("keydown", onGesture);
+    window.addEventListener("touchstart", onGesture, { passive: true });
 
     const tick = () => {
-      const kit = audio.current;
+      const kit = engine.current;
       const s = flightState.current;
       const opts = optionsRef.current;
       if (kit) {
@@ -91,221 +129,37 @@ export function useFlightAudio(
           bump(kit, 0.08, 0.12);
         }
         lastAirborne.current = s.airborne;
-
-        const theme = themeForPlan(opts.planId);
-        if (kit.music.planId !== opts.planId) {
-          kit.music.planId = opts.planId;
-          kit.music.theme = theme;
-          kit.music.step = 0;
-          kit.music.nextTime = kit.ctx.currentTime + 0.05;
-          kit.musicFilter.frequency.setTargetAtTime(
-            theme.filterHz,
-            kit.ctx.currentTime,
-            0.2,
-          );
-        }
-        const musicTarget = opts.musicMuted ? 0 : theme.gain;
-        kit.musicGain.gain.setTargetAtTime(
-          musicTarget,
-          kit.ctx.currentTime,
-          0.18,
-        );
-        if (!opts.musicMuted) {
-          scheduleMusic(kit, kit.ctx.currentTime);
-        }
       }
+      syncMusic();
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
+    syncMusic();
 
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener("keydown", onGesture);
       window.removeEventListener("pointerdown", onGesture);
-      audio.current?.ctx.close();
-      audio.current = null;
+      window.removeEventListener("keydown", onGesture);
+      window.removeEventListener("touchstart", onGesture);
+      el.pause();
+      el.src = "";
+      music.current = null;
+      engine.current?.ctx.close();
+      engine.current = null;
     };
   }, [axes, flightState]);
 }
 
-interface MusicTheme {
-  bpm: number;
-  root: number;
-  scale: number[];
-  pad: number[];
-  melody: number[];
-  bass: number[];
-  wave: OscillatorType;
-  filterHz: number;
-  gain: number;
-}
-
-interface MusicState {
-  planId: number;
-  theme: MusicTheme;
-  step: number;
-  nextTime: number;
-}
-
-interface AudioKit {
+interface EngineKit {
   ctx: AudioContext;
   engineOsc: OscillatorNode;
   engineOsc2: OscillatorNode;
   engineGain: GainNode;
   windGain: GainNode;
-  musicGain: GainNode;
-  musicFilter: BiquadFilterNode;
-  music: MusicState;
   master: GainNode;
 }
 
-function themeForPlan(planId: number): MusicTheme {
-  switch (planId) {
-    case 2:
-      return {
-        bpm: 110,
-        root: 293.66,
-        scale: [0, 2, 4, 7, 9, 10],
-        pad: [0, 4, 7, 10],
-        melody: [4, -1, 7, 4, 9, 7, 4, 2, 7, -1, 4, 0, 10, 7, 4, 2],
-        bass: [0, 0, 7, 5],
-        wave: "sawtooth",
-        filterHz: 720,
-        gain: 0.028,
-      };
-    case 3:
-      return {
-        bpm: 72,
-        root: 220,
-        scale: [0, 2, 3, 7, 8],
-        pad: [0, 3, 7],
-        melody: [0, -1, -1, 3, 2, -1, 7, -1, 3, -1, 0, 2, 8, 7, 3, 0],
-        bass: [0, -5, 0, 3],
-        wave: "sine",
-        filterHz: 640,
-        gain: 0.032,
-      };
-    case 4:
-      return {
-        bpm: 124,
-        root: 185,
-        scale: [0, 2, 3, 5, 7, 10],
-        pad: [0, 3, 7, 10],
-        melody: [7, 5, 3, 0, 10, 7, 5, 3, 7, -1, 10, 7, 5, 3, 2, 0],
-        bass: [0, 0, 5, 7],
-        wave: "square",
-        filterHz: 580,
-        gain: 0.022,
-      };
-    case 5:
-      return {
-        bpm: 84,
-        root: 196,
-        scale: [0, 2, 3, 5, 7, 9],
-        pad: [0, 3, 7, 10],
-        melody: [2, 3, 5, -1, 7, 5, 3, 2, 0, -1, 9, 7, 5, 3, 2, 0],
-        bass: [0, 2, 7, 5],
-        wave: "triangle",
-        filterHz: 700,
-        gain: 0.03,
-      };
-    case 6:
-      return {
-        bpm: 132,
-        root: 164.81,
-        scale: [0, 1, 3, 5, 7, 8],
-        pad: [0, 3, 7, 8],
-        melody: [0, 1, 3, 0, 7, 5, 3, 1, 8, 7, 5, 3, 1, 0, 3, 0],
-        bass: [0, 1, 0, 5],
-        wave: "sawtooth",
-        filterHz: 540,
-        gain: 0.026,
-      };
-    default:
-      return {
-        bpm: 88,
-        root: 261.63,
-        scale: [0, 2, 4, 7, 9],
-        pad: [0, 4, 7],
-        melody: [0, -1, 2, 4, 2, -1, 4, 7, 4, 2, 0, -1, 7, 4, 2, 0],
-        bass: [0, 0, 4, 7],
-        wave: "triangle",
-        filterHz: 880,
-        gain: 0.032,
-      };
-  }
-}
-
-function noteHz(theme: MusicTheme, degree: number): number {
-  const scale = theme.scale;
-  const steps = scale.length;
-  const octave = Math.floor(degree / steps);
-  const idx = ((degree % steps) + steps) % steps;
-  const semis = scale[idx] + octave * 12;
-  return theme.root * 2 ** (semis / 12);
-}
-
-function scheduleMusic(kit: AudioKit, now: number) {
-  const m = kit.music;
-  const stepSec = 60 / m.theme.bpm / 2;
-  if (m.nextTime < now - 0.5) {
-    m.nextTime = now + 0.02;
-  }
-  while (m.nextTime < now + 0.18) {
-    const i = m.step % 16;
-    const deg = m.theme.melody[i] ?? -1;
-    if (deg >= 0) {
-      pluck(kit, noteHz(m.theme, deg), m.nextTime, 0.2, 0.18);
-    }
-    if (i % 4 === 0) {
-      const bassDeg = m.theme.bass[(i / 4) % m.theme.bass.length] ?? 0;
-      pluck(kit, noteHz(m.theme, bassDeg) * 0.5, m.nextTime, 0.38, 0.22);
-    }
-    if (i === 0) {
-      for (const p of m.theme.pad) {
-        padTone(kit, noteHz(m.theme, p) * 0.5, m.nextTime, stepSec * 16);
-      }
-    }
-    m.nextTime += stepSec;
-    m.step += 1;
-  }
-}
-
-function pluck(
-  kit: AudioKit,
-  freq: number,
-  when: number,
-  dur: number,
-  peak: number,
-) {
-  const osc = kit.ctx.createOscillator();
-  osc.type = kit.music.theme.wave;
-  osc.frequency.setValueAtTime(freq, when);
-  const g = kit.ctx.createGain();
-  g.gain.setValueAtTime(0.0001, when);
-  g.gain.exponentialRampToValueAtTime(peak, when + 0.02);
-  g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
-  osc.connect(g);
-  g.connect(kit.musicFilter);
-  osc.start(when);
-  osc.stop(when + dur + 0.02);
-}
-
-function padTone(kit: AudioKit, freq: number, when: number, dur: number) {
-  const osc = kit.ctx.createOscillator();
-  osc.type = "sine";
-  osc.frequency.setValueAtTime(freq, when);
-  const g = kit.ctx.createGain();
-  g.gain.setValueAtTime(0.0001, when);
-  g.gain.exponentialRampToValueAtTime(0.07, when + 0.4);
-  g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
-  osc.connect(g);
-  g.connect(kit.musicFilter);
-  osc.start(when);
-  osc.stop(when + dur + 0.02);
-}
-
-function createKit(): AudioKit | null {
+function createEngine(): EngineKit | null {
   const Ctor =
     window.AudioContext ||
     (window as unknown as { webkitAudioContext?: typeof AudioContext })
@@ -352,28 +206,7 @@ function createKit(): AudioKit | null {
   windGain.connect(master);
   noise.start();
 
-  const musicFilter = ctx.createBiquadFilter();
-  musicFilter.type = "lowpass";
-  musicFilter.frequency.value = 880;
-  const musicGain = ctx.createGain();
-  musicGain.gain.value = 0;
-  musicFilter.connect(musicGain);
-  musicGain.connect(master);
-
-  const theme = themeForPlan(1);
-  musicFilter.frequency.value = theme.filterHz;
-
-  return {
-    ctx,
-    engineOsc,
-    engineOsc2,
-    engineGain,
-    windGain,
-    musicGain,
-    musicFilter,
-    music: { planId: 1, theme, step: 0, nextTime: ctx.currentTime + 0.2 },
-    master,
-  };
+  return { ctx, engineOsc, engineOsc2, engineGain, windGain, master };
 }
 
 function makeNoise(ctx: AudioContext): AudioBuffer {
@@ -384,7 +217,7 @@ function makeNoise(ctx: AudioContext): AudioBuffer {
   return buf;
 }
 
-function bump(kit: AudioKit, peak: number, seconds: number) {
+function bump(kit: EngineKit, peak: number, seconds: number) {
   const t = kit.ctx.currentTime;
   const g = kit.ctx.createGain();
   g.gain.setValueAtTime(peak, t);

@@ -13,39 +13,21 @@
     <meta property="og:title" content="Sky Pilot — Flight Simulator" />
     <meta property="og:description" content="A pocket flight simulator. Pick a route, fly the gates, and put it down softly on the runway." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/link_preview.png" />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:width" content="1731" />
-    <meta property="og:image:height" content="909" />
+    <meta property="og:url" content="https://sky-pilot-m4m.caffeine.xyz/" />
+    <meta property="og:image" content="https://sky-pilot-m4m.caffeine.xyz/og-image.jpg" />
+    <meta property="og:image:secure_url" content="https://sky-pilot-m4m.caffeine.xyz/og-image.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Sky Pilot — a Cessna over a coastal runway with flight-plan rings and a cockpit HUD." />
     <meta property="og:locale" content="en_US" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Sky Pilot — Flight Simulator" />
     <meta name="twitter:description" content="A pocket flight simulator. Pick a route, fly the gates, and put it down softly on the runway." />
-    <meta name="twitter:image" content="/link_preview.png" />
+    <meta name="twitter:image" content="https://sky-pilot-m4m.caffeine.xyz/og-image.jpg" />
     <meta name="twitter:image:alt" content="Sky Pilot — a Cessna over a coastal runway with flight-plan rings and a cockpit HUD." />
-    <link rel="image_src" href="/link_preview.png" />
+    <link rel="image_src" href="https://sky-pilot-m4m.caffeine.xyz/og-image.jpg" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <script>
-      (function () {
-        var origin = window.location.origin;
-        if (!origin || origin === "null") return;
-        var image = origin + "/link_preview.png";
-        var pairs = [
-          ["property", "og:image", image],
-          ["property", "og:url", origin + "/"],
-          ["name", "twitter:image", image],
-        ];
-        for (var i = 0; i < pairs.length; i++) {
-          var el = document.querySelector(
-            'meta[' + pairs[i][0] + '="' + pairs[i][1] + '"]',
-          );
-          if (el) el.setAttribute("content", pairs[i][2]);
-        }
-        var link = document.querySelector('link[rel="image_src"]');
-        if (link) link.setAttribute("href", image);
-      })();
-    </script>
   </head>
   <body>
     <div id="root"></div>
