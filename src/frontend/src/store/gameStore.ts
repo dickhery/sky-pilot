@@ -1,4 +1,4 @@
-import type { FlightPlan, Plane__1 } from "@/backend";
+import type { FlightPlan } from "@/backend";
 import type {
   FlightPhase,
   Plane,
@@ -9,14 +9,11 @@ import type {
 import { create } from "zustand";
 
 /**
- * Derive a frontend `Plane` from a backend `Plane__1` carried on a
- * `FlightPlan`. The backend plane only carries `{ id, name, handling }`;
- * the frontend `Plane` adds numeric specs (topSpeedKts, agility, stability)
- * used by the flight model and scoring. We map the backend plane id
- * (1 = Cessna, 2 = Gulfstream) to the frontend `PlaneId` and pick specs
- * that match each aircraft's character.
+ * Derive a frontend `Plane` from the plane record carried on a backend
+ * `FlightPlan`. That record only has `{ id, name, handling }`; the
+ * frontend `Plane` adds numeric specs used by the flight model.
  */
-function derivePlaneFromBackend(backendPlane: Plane__1): Plane {
+function derivePlaneFromBackend(backendPlane: FlightPlan["plane"]): Plane {
   const isCessna = backendPlane.id === 1n;
   const id: PlaneId = isCessna ? "CessnaSkyhawk" : "Extra300";
   return {
