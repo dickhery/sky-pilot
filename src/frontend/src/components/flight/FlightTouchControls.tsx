@@ -1,5 +1,5 @@
 import type { TouchAxes } from "@/hooks/useFlightControls";
-import { Camera, Hand } from "lucide-react";
+import { Camera, Hand, Music, Music2 } from "lucide-react";
 import { useCallback, useRef } from "react";
 
 interface FlightTouchControlsProps {
@@ -8,6 +8,8 @@ interface FlightTouchControlsProps {
   brakesOn: boolean;
   cockpitView: boolean;
   onToggleCockpit: () => void;
+  musicOn: boolean;
+  onToggleMusic: () => void;
 }
 
 /**
@@ -20,6 +22,8 @@ export function FlightTouchControls({
   brakesOn,
   cockpitView,
   onToggleCockpit,
+  musicOn,
+  onToggleMusic,
 }: FlightTouchControlsProps) {
   return (
     <div
@@ -36,6 +40,19 @@ export function FlightTouchControls({
           data-ocid="flight.touch.view"
         >
           <Camera className="h-5 w-5" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          className="hud-label flex h-12 w-12 touch-manipulation items-center justify-center rounded-full border border-primary/40 bg-card/80 text-primary backdrop-blur"
+          onClick={onToggleMusic}
+          aria-label={musicOn ? "Mute music" : "Play music"}
+          data-ocid="flight.touch.music"
+        >
+          {musicOn ? (
+            <Music2 className="h-5 w-5" aria-hidden="true" />
+          ) : (
+            <Music className="h-5 w-5 opacity-50" aria-hidden="true" />
+          )}
         </button>
         <button
           type="button"

@@ -18,6 +18,7 @@ import {
   type LucideIcon,
   Minimize2,
   MousePointer2,
+  Music2,
 } from "lucide-react";
 
 interface ControlBinding {
@@ -84,6 +85,12 @@ const BINDINGS: ControlBinding[] = [
     input: "C",
     action: "Toggle cockpit / chase camera",
     icon: MousePointer2,
+    group: "View",
+  },
+  {
+    input: "M",
+    action: "Toggle the route soundtrack",
+    icon: Music2,
     group: "View",
   },
 ];

@@ -15,7 +15,12 @@ import {
   missionStep,
 } from "@/components/flight/flightPhysics";
 import { Button } from "@/components/ui/button";
-import { useFlightAudio } from "@/hooks/useFlightAudio";
+import {
+  bindMusicHotkey,
+  readMusicPref,
+  useFlightAudio,
+  writeMusicPref,
+} from "@/hooks/useFlightAudio";
 import { useFlightControls } from "@/hooks/useFlightControls";
 import { useRecordFlightLog } from "@/hooks/useFlightData";
 import { useGameStore } from "@/store/gameStore";
@@ -61,6 +66,7 @@ export function FlightSimulationPage() {
   const setScore = useGameStore((s) => s.setScore);
 
   const [showResults, setShowResults] = useState(false);
+  const [musicOn, setMusicOn] = useState(readMusicPref);
   const { axes, touch, throttlePct, brakesOn, cockpitView, toggleCockpit } =
     useFlightControls({ enabled: !showResults });
 
@@ -79,11 +85,20 @@ export function FlightSimulationPage() {
     landingHint: null as LandingHint,
     step: 1,
   });
-  useFlightAudio(
-    flightState,
-    axes,
-    phase === "complete" || phase === "crashed",
-  );
+  const flightOver = phase === "complete" || phase === "crashed";
+  useFlightAudio(flightState, axes, {
+    engineMuted: flightOver,
+    musicMuted: !musicOn || flightOver || showResults,
+    planId,
+  });
+  const toggleMusic = useCallback(() => {
+    setMusicOn((on) => {
+      const next = !on;
+      writeMusicPref(next);
+      return next;
+    });
+  }, []);
+  useEffect(() => bindMusicHotkey(toggleMusic), [toggleMusic]);
   const [waypointInfo, setWaypointInfo] = useState<{
     name: string;
     distance: number;
@@ -276,6 +291,8 @@ export function FlightSimulationPage() {
         brakesOn={brakesOn}
         cockpitView={cockpitView}
         onToggleCockpit={toggleCockpit}
+        musicOn={musicOn}
+        onToggleMusic={toggleMusic}
       />
       {!showResults && phase !== "crashed" && phase !== "complete" && (
         <FlightTouchControls
@@ -284,6 +301,8 @@ export function FlightSimulationPage() {
           brakesOn={brakesOn}
           cockpitView={cockpitView}
           onToggleCockpit={toggleCockpit}
+          musicOn={musicOn}
+          onToggleMusic={toggleMusic}
         />
       )}
       {showResults && (

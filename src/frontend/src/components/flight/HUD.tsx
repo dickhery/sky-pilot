@@ -11,6 +11,8 @@ import {
   Gauge,
   Keyboard,
   Mountain,
+  Music,
+  Music2,
   Navigation,
   TriangleAlert,
 } from "lucide-react";
@@ -38,6 +40,8 @@ interface HUDProps {
   brakesOn: boolean;
   cockpitView: boolean;
   onToggleCockpit: () => void;
+  musicOn: boolean;
+  onToggleMusic: () => void;
 }
 
 const MISSION_STEPS = [
@@ -68,6 +72,8 @@ export function HUD({
   brakesOn,
   cockpitView,
   onToggleCockpit,
+  musicOn,
+  onToggleMusic,
 }: HUDProps) {
   const phaseLabel: Record<FlightPhase, string> = {
     idle: "Standby",
@@ -326,6 +332,8 @@ export function HUD({
           <span>Brakes</span>
           <Key>C</Key>
           <span>Cockpit / chase</span>
+          <Key>M</Key>
+          <span>Music on / off</span>
         </div>
         <button
           type="button"
@@ -334,6 +342,19 @@ export function HUD({
           data-ocid="flight.hud.view_toggle"
         >
           {cockpitView ? "Chase camera" : "Cockpit view"}
+        </button>
+        <button
+          type="button"
+          className="pointer-events-auto mt-1 flex w-full items-center justify-center gap-1 rounded-sm border border-primary/40 bg-primary/10 px-2 py-1 text-[10px] text-primary"
+          onClick={onToggleMusic}
+          data-ocid="flight.hud.music_toggle"
+        >
+          {musicOn ? (
+            <Music2 className="h-3 w-3" aria-hidden="true" />
+          ) : (
+            <Music className="h-3 w-3 opacity-50" aria-hidden="true" />
+          )}
+          {musicOn ? "Music on" : "Music off"}
         </button>
       </div>
     </div>
