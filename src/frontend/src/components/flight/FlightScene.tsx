@@ -58,15 +58,16 @@ export function FlightScene({
       shadows
       dpr={[1, 1.5]}
       gl={{
+        alpha: false,
         antialias: true,
         powerPreference: "high-performance",
         toneMapping: THREE.ACESFilmicToneMapping,
         toneMappingExposure: 1.05,
       }}
       camera={{
-        fov: cockpitView ? 72 : 58,
-        near: cockpitView ? 0.04 : 0.15,
-        far: 2800,
+        fov: cockpitView ? 68 : 58,
+        near: cockpitView ? 0.1 : 0.2,
+        far: 5000,
         position: [0, 6, 50],
       }}
     >
@@ -438,19 +439,22 @@ function FlightRig({
     const bankLean = state.rotation.z * 0.35;
 
     if (cockpitView) {
-      persp.fov = 72;
-      persp.near = 0.04;
+      persp.fov = 68;
+      persp.near = 0.1;
+      persp.far = 5000;
       persp.updateProjectionMatrix();
-      _camOffset.set(0.12, 0.38, 0.18);
+      // Right-hand seat, above the dash, looking out the windshield cutout.
+      _camOffset.set(0.16, 0.42, 0.22);
       _camOffset.applyEuler(state.rotation);
       camera.position.copy(state.position).add(_camOffset);
       camera.quaternion.setFromEuler(state.rotation);
-      camera.rotateX(-0.06);
-      _up.set(0, 1, 0);
+      camera.rotateX(-0.08);
+      _up.set(0, 1, 0).applyEuler(state.rotation);
       camera.up.copy(_up);
     } else {
       persp.fov = 58;
-      persp.near = 0.15;
+      persp.near = 0.2;
+      persp.far = 5000;
       persp.updateProjectionMatrix();
       const dist = state.airborne ? 12.5 : 9;
       const height = state.airborne ? 3.6 : 2.6;

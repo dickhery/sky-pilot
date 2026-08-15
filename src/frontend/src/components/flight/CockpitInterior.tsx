@@ -16,7 +16,9 @@ interface CockpitInteriorProps {
 
 /**
  * Pilot-seat interior. Built from primitives so we stay Caffeine-friendly
- * (no extra GLB downloads). Gauges read the live flight-state ref each frame.
+ * (no extra GLB downloads). The cabin is a hollow shell with a windshield
+ * cutout — a solid box here would fill the canopy and read as a black wall.
+ * Gauges read the live flight-state ref each frame.
  */
 export function CockpitInterior({
   planeId,
@@ -26,6 +28,8 @@ export function CockpitInterior({
   const isCessna = planeId === "CessnaSkyhawk";
   const dash = isCessna ? "#2a323c" : "#1a1c22";
   const leather = isCessna ? "#4a3224" : "#2a1c18";
+  const body = isCessna ? "#f4f7fb" : "#161c28";
+  const accent = isCessna ? "#1a8fa4" : "#e8a030";
   const yokeRef = useRef<THREE.Group>(null);
   const thrRef = useRef<THREE.Mesh>(null);
   const asi = useRef<THREE.Group>(null);
@@ -62,34 +66,117 @@ export function CockpitInterior({
   });
 
   return (
-    <group position={[0, 0.12, 0.05]}>
-      {/* Cabin walls */}
-      <mesh position={[0, 0.18, 0.35]}>
-        <boxGeometry args={[1.05, 0.72, 1.4]} />
+    <group>
+      {/* Dim fill so the dash is readable without extra asset work. */}
+      <pointLight
+        position={[0.1, 0.42, 0.15]}
+        color="#ffe8c8"
+        intensity={0.4}
+        distance={2.4}
+      />
+
+      {/* Floor */}
+      <mesh position={[0, -0.14, 0.28]}>
+        <boxGeometry args={[0.98, 0.04, 1.15]} />
+        <meshStandardMaterial color="#2a2622" roughness={0.92} />
+      </mesh>
+
+      {/* Rear bulkhead — stays behind the seat, never in the windshield */}
+      <mesh position={[0, 0.22, 0.86]}>
+        <boxGeometry args={[0.98, 0.78, 0.06]} />
         <meshStandardMaterial color={dash} roughness={0.85} />
       </mesh>
+
+      {/* Roof stays behind the camera so it cannot letterbox the view */}
+      <mesh position={[0, 0.78, 0.58]}>
+        <boxGeometry args={[0.98, 0.04, 0.55]} />
+        <meshStandardMaterial color={dash} roughness={0.8} />
+      </mesh>
+
+      {/* Side sills (below the side windows) */}
+      <mesh position={[-0.54, 0.0, 0.22]}>
+        <boxGeometry args={[0.04, 0.28, 1.05]} />
+        <meshStandardMaterial color={dash} roughness={0.82} />
+      </mesh>
+      <mesh position={[0.54, 0.0, 0.22]}>
+        <boxGeometry args={[0.04, 0.28, 1.05]} />
+        <meshStandardMaterial color={dash} roughness={0.82} />
+      </mesh>
+
+      {/* Side-window upper rails */}
+      <mesh position={[-0.54, 0.58, 0.32]}>
+        <boxGeometry args={[0.03, 0.03, 0.6]} />
+        <meshStandardMaterial color="#1c2228" roughness={0.6} />
+      </mesh>
+      <mesh position={[0.54, 0.58, 0.32]}>
+        <boxGeometry args={[0.03, 0.03, 0.6]} />
+        <meshStandardMaterial color="#1c2228" roughness={0.6} />
+      </mesh>
+
+      {/* Slim A-pillars at the windshield corners */}
+      <mesh position={[-0.52, 0.4, -0.18]} rotation={[0.38, 0, 0.08]}>
+        <boxGeometry args={[0.028, 0.52, 0.028]} />
+        <meshStandardMaterial
+          color="#1c2228"
+          metalness={0.25}
+          roughness={0.5}
+        />
+      </mesh>
+      <mesh position={[0.52, 0.4, -0.18]} rotation={[0.38, 0, -0.08]}>
+        <boxGeometry args={[0.028, 0.52, 0.028]} />
+        <meshStandardMaterial
+          color="#1c2228"
+          metalness={0.25}
+          roughness={0.5}
+        />
+      </mesh>
+
+      {/* Thin windshield brow */}
+      <mesh position={[0, 0.68, -0.16]} rotation={[0.4, 0, 0]}>
+        <boxGeometry args={[0.98, 0.025, 0.05]} />
+        <meshStandardMaterial color="#1c2228" roughness={0.55} />
+      </mesh>
+
+      {/* Glareshield + instrument dash (below the look-through) */}
+      <mesh position={[0, 0.16, -0.18]} rotation={[-0.16, 0, 0]}>
+        <boxGeometry args={[0.92, 0.04, 0.26]} />
+        <meshStandardMaterial color="#1c2228" roughness={0.7} />
+      </mesh>
+      <mesh position={[0, 0.04, -0.1]}>
+        <boxGeometry args={[0.9, 0.18, 0.26]} />
+        <meshStandardMaterial color={dash} roughness={0.65} metalness={0.15} />
+      </mesh>
+
+      {/* Short hood just beyond the glareshield. */}
+      <mesh position={[0, -0.1, -0.62]} rotation={[0.2, 0, 0]}>
+        <boxGeometry args={[0.34, 0.055, 0.7]} />
+        <meshStandardMaterial color={body} metalness={0.22} roughness={0.4} />
+      </mesh>
+      <mesh position={[0, -0.08, -0.92]} rotation={[0.16, 0, 0]}>
+        <boxGeometry args={[0.2, 0.035, 0.28]} />
+        <meshStandardMaterial
+          color={accent}
+          metalness={0.35}
+          roughness={0.35}
+        />
+      </mesh>
+
       {/* Seats */}
-      <mesh position={[0.16, -0.02, 0.42]}>
+      <mesh position={[0.16, -0.04, 0.42]}>
         <boxGeometry args={[0.34, 0.12, 0.38]} />
         <meshStandardMaterial color={leather} roughness={0.9} />
       </mesh>
-      <mesh position={[0.16, 0.16, 0.55]}>
+      <mesh position={[0.16, 0.14, 0.56]}>
         <boxGeometry args={[0.34, 0.28, 0.1]} />
         <meshStandardMaterial color={leather} roughness={0.9} />
       </mesh>
-      <mesh position={[-0.22, -0.02, 0.42]}>
+      <mesh position={[-0.22, -0.04, 0.42]}>
         <boxGeometry args={[0.3, 0.12, 0.36]} />
         <meshStandardMaterial color={leather} roughness={0.92} />
       </mesh>
-
-      {/* Glareshield + dash */}
-      <mesh position={[0, 0.12, -0.22]} rotation={[-0.18, 0, 0]}>
-        <boxGeometry args={[0.98, 0.08, 0.42]} />
-        <meshStandardMaterial color="#1c2228" roughness={0.7} />
-      </mesh>
-      <mesh position={[0, 0.02, -0.18]}>
-        <boxGeometry args={[0.96, 0.22, 0.36]} />
-        <meshStandardMaterial color={dash} roughness={0.65} metalness={0.15} />
+      <mesh position={[-0.22, 0.12, 0.55]}>
+        <boxGeometry args={[0.3, 0.24, 0.09]} />
+        <meshStandardMaterial color={leather} roughness={0.92} />
       </mesh>
 
       {/* Instrument row */}
@@ -97,10 +184,10 @@ export function CockpitInterior({
       <Gauge faceRef={ai} x={-0.1} label="#102030" ball />
       <Gauge faceRef={alt} x={0.12} label="#1a1a1a" />
       <Gauge faceRef={hdg} x={0.32} label="#141814" />
-      <Gauge faceRef={vsi} x={0.0} y={-0.08} z={-0.02} scale={0.78} />
+      <Gauge faceRef={vsi} x={0.0} y={-0.02} z={-0.08} scale={0.78} />
 
-      {/* Yoke */}
-      <group ref={yokeRef} position={[0.16, -0.02, -0.02]}>
+      {/* Yoke at the right-hand station the camera sits behind */}
+      <group ref={yokeRef} position={[0.16, -0.02, 0.02]}>
         <mesh position={[0, 0, 0.08]}>
           <cylinderGeometry args={[0.025, 0.03, 0.22, 8]} />
           <meshStandardMaterial color="#2c3036" metalness={0.4} />
@@ -112,46 +199,13 @@ export function CockpitInterior({
       </group>
 
       {/* Throttle quadrant */}
-      <mesh position={[0.38, -0.06, 0.08]}>
+      <mesh position={[0.38, -0.06, 0.12]}>
         <boxGeometry args={[0.12, 0.06, 0.22]} />
         <meshStandardMaterial color="#3a3f46" />
       </mesh>
-      <mesh ref={thrRef} position={[0.38, 0.0, 0.08]}>
+      <mesh ref={thrRef} position={[0.38, 0.0, 0.12]}>
         <boxGeometry args={[0.04, 0.08, 0.04]} />
         <meshStandardMaterial color="#c43c2c" />
-      </mesh>
-
-      {/* Windshield opening — empty so the world shows through */}
-      <mesh position={[0, 0.38, -0.42]} rotation={[0.35, 0, 0]}>
-        <planeGeometry args={[0.92, 0.42]} />
-        <meshBasicMaterial
-          color="#7ec8e8"
-          transparent
-          opacity={0.06}
-          side={THREE.DoubleSide}
-          depthWrite={false}
-        />
-      </mesh>
-      {/* Side windows */}
-      <mesh position={[0.5, 0.28, 0.05]} rotation={[0, Math.PI / 2, 0]}>
-        <planeGeometry args={[0.55, 0.28]} />
-        <meshBasicMaterial
-          color="#7ec8e8"
-          transparent
-          opacity={0.08}
-          side={THREE.DoubleSide}
-          depthWrite={false}
-        />
-      </mesh>
-      <mesh position={[-0.5, 0.28, 0.05]} rotation={[0, Math.PI / 2, 0]}>
-        <planeGeometry args={[0.55, 0.28]} />
-        <meshBasicMaterial
-          color="#7ec8e8"
-          transparent
-          opacity={0.08}
-          side={THREE.DoubleSide}
-          depthWrite={false}
-        />
       </mesh>
     </group>
   );
@@ -160,8 +214,8 @@ export function CockpitInterior({
 function Gauge({
   faceRef,
   x,
-  y = 0.06,
-  z = -0.28,
+  y = 0.1,
+  z = -0.24,
   scale = 1,
   label = "#111",
   ball = false,
@@ -176,7 +230,7 @@ function Gauge({
 }) {
   return (
     <group position={[x, y, z]} scale={scale}>
-      <mesh rotation={[0, 0, 0]}>
+      <mesh>
         <circleGeometry args={[0.08, 24]} />
         <meshStandardMaterial color={label} roughness={0.4} metalness={0.2} />
       </mesh>

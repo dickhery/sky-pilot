@@ -223,7 +223,7 @@ export const PlaneModel = forwardRef<THREE.Group, PlaneModelProps>(
         mat.opacity = 0.18 + throttle * 0.28;
       }
       if (gearRef.current) {
-        gearRef.current.visible = !airborne;
+        gearRef.current.visible = !airborne && !cockpitView;
       }
       if (lightRef.current) {
         lightRef.current.intensity = airborne ? 0.15 : 0.55;
@@ -238,8 +238,9 @@ export const PlaneModel = forwardRef<THREE.Group, PlaneModelProps>(
     return (
       <group ref={ref}>
         <group ref={shakeRef}>
-          {/* Fuselage */}
-          <mesh geometry={fuselage} castShadow>
+          {/* Fuselage — hidden in POV so the lathe cannot clip the near
+              plane and paint a black slab across the windshield. */}
+          <mesh geometry={fuselage} castShadow visible={!cockpitView}>
             <meshStandardMaterial
               color={colors.body}
               metalness={0.22}
@@ -248,8 +249,13 @@ export const PlaneModel = forwardRef<THREE.Group, PlaneModelProps>(
             />
           </mesh>
 
-          {/* Nose cowl ring */}
-          <mesh position={[0, 0.02, -2.18]} rotation={[Math.PI / 2, 0, 0]}>
+          {/* Nose cowl, spinner, and prop sit inside the POV frustum and
+              read as a floating blob in the windshield — hide them there. */}
+          <mesh
+            position={[0, 0.02, -2.18]}
+            rotation={[Math.PI / 2, 0, 0]}
+            visible={!cockpitView}
+          >
             <torusGeometry args={[0.3, 0.045, 10, 24]} />
             <meshStandardMaterial
               color={colors.accent}
@@ -257,9 +263,11 @@ export const PlaneModel = forwardRef<THREE.Group, PlaneModelProps>(
               roughness={0.32}
             />
           </mesh>
-
-          {/* Spinner */}
-          <mesh position={[0, 0.02, -2.42]} rotation={[Math.PI / 2, 0, 0]}>
+          <mesh
+            position={[0, 0.02, -2.42]}
+            rotation={[Math.PI / 2, 0, 0]}
+            visible={!cockpitView}
+          >
             <sphereGeometry
               args={[0.16, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.6]}
             />
@@ -269,7 +277,11 @@ export const PlaneModel = forwardRef<THREE.Group, PlaneModelProps>(
               roughness={0.25}
             />
           </mesh>
-          <mesh position={[0, 0.02, -2.55]} rotation={[Math.PI / 2, 0, 0]}>
+          <mesh
+            position={[0, 0.02, -2.55]}
+            rotation={[Math.PI / 2, 0, 0]}
+            visible={!cockpitView}
+          >
             <coneGeometry args={[0.09, 0.22, 14]} />
             <meshStandardMaterial
               color={colors.spinner}
@@ -279,7 +291,11 @@ export const PlaneModel = forwardRef<THREE.Group, PlaneModelProps>(
           </mesh>
 
           {/* Propeller */}
-          <group ref={propRef} position={[0, 0.02, -2.5]}>
+          <group
+            ref={propRef}
+            position={[0, 0.02, -2.5]}
+            visible={!cockpitView}
+          >
             <group ref={bladesRef}>
               {(isCessna ? ["port", "starboard"] : ["a", "b", "c"]).map(
                 (id, i) => (
@@ -341,14 +357,16 @@ export const PlaneModel = forwardRef<THREE.Group, PlaneModelProps>(
               </mesh>
             </>
           )}
-          {/* Windshield frame */}
-          <mesh position={[0, 0.46, -0.58]} rotation={[0.55, 0, 0]}>
+          {/* Windshield frame + fuselage stripe sit inside the POV frustum */}
+          <mesh
+            position={[0, 0.46, -0.58]}
+            rotation={[0.55, 0, 0]}
+            visible={!cockpitView}
+          >
             <torusGeometry args={[0.32, 0.018, 6, 18, Math.PI]} />
             <meshStandardMaterial color={colors.trim} metalness={0.3} />
           </mesh>
-
-          {/* Fuselage stripe */}
-          <mesh position={[0, 0.02, 0.15]} rotation={[0, 0, 0]}>
+          <mesh position={[0, 0.02, 0.15]} visible={!cockpitView}>
             <boxGeometry args={[0.88, 0.07, 3.4]} />
             <meshStandardMaterial
               color={colors.stripe}
@@ -356,7 +374,7 @@ export const PlaneModel = forwardRef<THREE.Group, PlaneModelProps>(
               roughness={0.45}
             />
           </mesh>
-          <mesh position={[0, 0.02, 0.15]}>
+          <mesh position={[0, 0.02, 0.15]} visible={!cockpitView}>
             <boxGeometry args={[0.9, 0.035, 3.42]} />
             <meshStandardMaterial
               color={colors.accent}
@@ -439,7 +457,11 @@ export const PlaneModel = forwardRef<THREE.Group, PlaneModelProps>(
           </group>
 
           {/* Exhaust stacks */}
-          <mesh position={[0.2, -0.12, -1.55]} rotation={[1.2, 0, 0.15]}>
+          <mesh
+            position={[0.2, -0.12, -1.55]}
+            rotation={[1.2, 0, 0.15]}
+            visible={!cockpitView}
+          >
             <cylinderGeometry args={[0.035, 0.04, 0.28, 8]} />
             <meshStandardMaterial
               color="#3a3a3a"
@@ -447,7 +469,11 @@ export const PlaneModel = forwardRef<THREE.Group, PlaneModelProps>(
               roughness={0.35}
             />
           </mesh>
-          <mesh position={[-0.2, -0.12, -1.55]} rotation={[1.2, 0, -0.15]}>
+          <mesh
+            position={[-0.2, -0.12, -1.55]}
+            rotation={[1.2, 0, -0.15]}
+            visible={!cockpitView}
+          >
             <cylinderGeometry args={[0.035, 0.04, 0.28, 8]} />
             <meshStandardMaterial
               color="#3a3a3a"
@@ -457,13 +483,13 @@ export const PlaneModel = forwardRef<THREE.Group, PlaneModelProps>(
           </mesh>
 
           {/* Antenna */}
-          <mesh position={[0, 0.72, 0.85]}>
+          <mesh position={[0, 0.72, 0.85]} visible={!cockpitView}>
             <cylinderGeometry args={[0.012, 0.012, 0.45, 5]} />
             <meshStandardMaterial color="#222" />
           </mesh>
 
           {/* Landing light */}
-          <mesh position={[0.18, -0.05, -1.95]}>
+          <mesh position={[0.18, -0.05, -1.95]} visible={!cockpitView}>
             <sphereGeometry args={[0.045, 8, 8]} />
             <meshBasicMaterial color="#fff6d0" />
           </mesh>
@@ -473,10 +499,11 @@ export const PlaneModel = forwardRef<THREE.Group, PlaneModelProps>(
             color="#fff4d8"
             intensity={0.4}
             distance={18}
+            visible={!cockpitView}
           />
 
           {/* Landing gear */}
-          <group ref={gearRef}>
+          <group ref={gearRef} visible={!cockpitView}>
             <LandingGear
               x={isCessna ? 1.15 : 0.95}
               z={0.15}
