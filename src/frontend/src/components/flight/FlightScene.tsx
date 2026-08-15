@@ -67,8 +67,8 @@ export function FlightScene({
       <WaterBody />
       <TreeField />
       <DistantMountains />
-      <AirportBuildings />
-      <DestinationAirport />
+      <AirportBuildings night={weather === "Nighttime"} />
+      <DestinationAirport night={weather === "Nighttime"} />
       <Runway
         start={layout.departureStart}
         end={layout.departureEnd}
@@ -294,37 +294,45 @@ function CheckpointRing({
     const active = next === index && !flightState.current.finished;
     ref.current.visible = !collected;
     if (!active) {
-      ref.current.scale.setScalar(0.92);
-      if (matRef.current) matRef.current.opacity = 0.28;
+      ref.current.scale.setScalar(0.95);
+      if (matRef.current) matRef.current.opacity = 0.5;
       return;
     }
-    const pulse = 1 + Math.sin(clockState.clock.elapsedTime * 2.6) * 0.08;
+    const pulse = 1 + Math.sin(clockState.clock.elapsedTime * 2.6) * 0.1;
     ref.current.scale.setScalar(pulse);
     if (matRef.current) {
-      matRef.current.opacity = 0.88;
+      matRef.current.opacity = 1;
     }
   });
 
   return (
     <group ref={ref} position={checkpoint.position} rotation={[0, heading, 0]}>
+      <mesh position={[0, -checkpoint.position.y / 2, 0]}>
+        <cylinderGeometry args={[0.22, 0.35, checkpoint.position.y, 8]} />
+        <meshBasicMaterial color="#5ef2ff" transparent opacity={0.38} />
+      </mesh>
       <mesh>
-        <torusGeometry args={[10, 0.42, 12, 40]} />
+        <torusGeometry args={[12, 0.7, 12, 40]} />
         <meshBasicMaterial
           ref={matRef}
-          color="#2bb8c9"
+          color="#5ef2ff"
           transparent
-          opacity={0.85}
+          opacity={0.95}
         />
       </mesh>
       <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[8.4, 11.4, 40]} />
+        <ringGeometry args={[9.5, 14, 40]} />
         <meshBasicMaterial
-          color="#7ee7f2"
+          color="#b8fbff"
           transparent
-          opacity={0.18}
+          opacity={0.35}
           side={THREE.DoubleSide}
           depthWrite={false}
         />
+      </mesh>
+      <mesh>
+        <sphereGeometry args={[1.4, 16, 16]} />
+        <meshBasicMaterial color="#fff6b0" />
       </mesh>
     </group>
   );

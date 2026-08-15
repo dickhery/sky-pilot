@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
+import { useInternetIdentity } from "@caffeineai/core-infrastructure";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Plane, Rocket } from "lucide-react";
+import { LogIn, LogOut, Plane, Rocket } from "lucide-react";
 
 /**
  * Sky Pilot app header.
@@ -12,6 +13,7 @@ import { Plane, Rocket } from "lucide-react";
 export function Header() {
   const location = useRouterState({ select: (s) => s.location.pathname });
   const isMenu = location === "/";
+  const { isAuthenticated, login, clear, isLoggingIn } = useInternetIdentity();
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60">
@@ -36,20 +38,48 @@ export function Header() {
           </span>
         </Link>
 
-        {!isMenu && (
-          <Button
-            asChild
-            variant="secondary"
-            size="sm"
-            className="hud-label gap-2"
-            data-ocid="header.back_to_menu.button"
-          >
-            <Link to="/">
-              <Rocket className="h-4 w-4" aria-hidden="true" />
-              Back to Menu
-            </Link>
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {isAuthenticated ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="hud-label gap-2"
+              onClick={() => clear()}
+              data-ocid="header.sign_out.button"
+            >
+              <LogOut className="h-4 w-4" aria-hidden="true" />
+              Sign out
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="hud-label gap-2"
+              onClick={() => login()}
+              disabled={isLoggingIn}
+              data-ocid="header.sign_in.button"
+            >
+              <LogIn className="h-4 w-4" aria-hidden="true" />
+              {isLoggingIn ? "Signing in…" : "Sign in"}
+            </Button>
+          )}
+          {!isMenu && (
+            <Button
+              asChild
+              variant="secondary"
+              size="sm"
+              className="hud-label gap-2"
+              data-ocid="header.back_to_menu.button"
+            >
+              <Link to="/">
+                <Rocket className="h-4 w-4" aria-hidden="true" />
+                Back to Menu
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
     </header>
   );

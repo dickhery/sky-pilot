@@ -5,6 +5,7 @@ import { FlightLogsPage } from "@/pages/FlightLogsPage";
 import { FlightPlansPage } from "@/pages/FlightPlansPage";
 import { FlightSchoolPage } from "@/pages/FlightSchoolPage";
 import { FlightSimulationPage } from "@/pages/FlightSimulationPage";
+import { LeaderboardPage } from "@/pages/LeaderboardPage";
 import { MenuPage } from "@/pages/MenuPage";
 import {
   Outlet,
@@ -67,6 +68,12 @@ const flightSchoolRoute = createRoute({
   component: FlightSchoolPage,
 });
 
+const leaderboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/leaderboard",
+  component: () => <LeaderboardPage />,
+});
+
 // ── Catch-all → menu ──────────────────────────────────────────────────────
 const notFoundRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -84,6 +91,7 @@ const routeTree = rootRoute.addChildren([
   flightLogsRoute,
   flightLogDetailRoute,
   flightSchoolRoute,
+  leaderboardRoute,
   notFoundRoute,
 ]);
 

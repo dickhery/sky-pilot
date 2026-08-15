@@ -15,6 +15,13 @@ type UserRole =
    guest;
    user;
  };
+type SubmitOutcome = 
+ variant {
+   improved: LeaderboardEntryView;
+   posted: LeaderboardEntryView;
+   tooLow: record {needed: nat;};
+   unchanged: LeaderboardEntryView;
+ };
 type ScoreBreakdown = 
  record {
    landingSmoothness: nat;
@@ -32,7 +39,7 @@ type Result =
    ok;
  };
 type PlayerId = principal;
-type Plane__1 = 
+type Plane__2 = 
  record {
    handling: text;
    id: PlaneId;
@@ -46,13 +53,35 @@ type Plane =
  };
 type PlanId = nat;
 type LogId = nat;
+type LeaderboardEntryView = 
+ record {
+   displayName: text;
+   id: EntryId;
+   planName: text;
+   plane: Plane;
+   playerId: principal;
+   submittedAt: int;
+   total: nat;
+   weather: Weather;
+ };
+type LeaderboardEntry = 
+ record {
+   displayName: text;
+   id: EntryId;
+   planName: text;
+   plane: Plane;
+   playerId: principal;
+   submittedAt: int;
+   total: nat;
+   weather: Weather;
+ };
 type FlightPlan = 
  record {
    departure: Runway;
    id: PlanId;
    landing: Runway;
    name: text;
-   plane: Plane__1;
+   plane: Plane__2;
    routeDescription: text;
    waypoint: Waypoint;
    weather: Weather;
@@ -99,9 +128,13 @@ type Error =
    UnknownNonce;
    UntrustedSsoSource: record {domain: text;};
  };
+type EntryId = nat;
 service : {
   __accessControlState: () -> (reserved) query;
   __flightLogs: (io: opt nat, count: opt nat) -> (vec FlightLog) query;
+  __leaderboard: (io: opt nat, count: opt nat) ->
+   (vec LeaderboardEntry) query;
+  __nextLeaderboardId: () -> (reserved) query;
   __nextLogId: () -> (reserved) query;
   _initialize_access_control: () -> ();
   _internet_identity_sign_in_finish: () -> (Result);
@@ -113,8 +146,11 @@ service : {
   isCallerAdmin: () -> (bool) query;
   listFlightLogs: () -> (vec FlightLogView) query;
   listFlightPlans: () -> (vec FlightPlan) query;
-  listPlanes: () -> (vec Plane__1) query;
+  listLeaderboard: () -> (vec LeaderboardEntryView) query;
+  listPlanes: () -> (vec Plane__2) query;
   listWeather: () -> (vec Weather) query;
   recordFlightLog: (completedAt: int, planName: text, plane: Plane, weather:
    Weather, score: ScoreBreakdown) -> (FlightLogView);
+  submitLeaderboardScore: (displayName: text, planName: text, plane: 
+   Plane, weather: Weather, total: nat) -> (SubmitOutcome);
 }
