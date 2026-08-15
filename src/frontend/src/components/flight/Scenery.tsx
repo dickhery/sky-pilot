@@ -389,26 +389,26 @@ export function WaterBody() {
 }
 
 /** Hangars with barrel roofs, a control tower, and a windsock. */
-export function AirportBuildings({ night = false }: { night?: boolean }) {
+export function AirportBuildings() {
   return (
-    <group position={[48, 0, 78]}>
+    <group position={[26, 0, 62]}>
       <ControlTower />
       <Hangar position={[-16, 0, 6]} width={16} depth={10} height={5.2} />
       <Hangar position={[12, 0, 10]} width={11} depth={8} height={4.2} />
       <Windsock position={[-2, 0, -8]} />
+      {/* Apron */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-2, 0.03, 8]}>
         <planeGeometry args={[42, 22]} />
         <meshStandardMaterial color="#2a2e34" roughness={0.88} />
       </mesh>
-      {night && <ApronLights />}
     </group>
   );
 }
 
 /** Compact destination field next to the landing runway. */
-export function DestinationAirport({ night = false }: { night?: boolean }) {
+export function DestinationAirport() {
   return (
-    <group position={[138, 0, -1660]}>
+    <group position={[132, 0, -1680]}>
       <Hangar position={[0, 0, 8]} width={12} depth={8} height={4} />
       <mesh position={[8, 3.2, -4]} castShadow>
         <boxGeometry args={[2.4, 6.4, 2.4]} />
@@ -427,36 +427,6 @@ export function DestinationAirport({ night = false }: { night?: boolean }) {
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-4, 0.03, 4]}>
         <planeGeometry args={[28, 18]} />
         <meshStandardMaterial color="#2a2e34" roughness={0.88} />
-      </mesh>
-      {night && <ApronLights />}
-    </group>
-  );
-}
-
-function ApronLights() {
-  return (
-    <group>
-      <pointLight
-        position={[0, 6, 4]}
-        color="#ffd9a0"
-        intensity={2.2}
-        distance={40}
-      />
-      <mesh position={[-8, 3.2, 10]}>
-        <boxGeometry args={[0.2, 6.4, 0.2]} />
-        <meshStandardMaterial color="#4a5058" />
-      </mesh>
-      <mesh position={[-8, 6.5, 10]}>
-        <sphereGeometry args={[0.28, 8, 8]} />
-        <meshBasicMaterial color="#ffd080" />
-      </mesh>
-      <mesh position={[8, 3.2, 10]}>
-        <boxGeometry args={[0.2, 6.4, 0.2]} />
-        <meshStandardMaterial color="#4a5058" />
-      </mesh>
-      <mesh position={[8, 6.5, 10]}>
-        <sphereGeometry args={[0.28, 8, 8]} />
-        <meshBasicMaterial color="#ffd080" />
       </mesh>
     </group>
   );
@@ -478,13 +448,11 @@ function ControlTower() {
         <mesh key={`tw-${y}`} position={[0, y, 1.62]}>
           <boxGeometry args={[2.2, 0.55, 0.06]} />
           <meshStandardMaterial
-            color="#9fd4f0"
-            emissive="#7ec8e8"
-            emissiveIntensity={0.7}
-            metalness={0.4}
+            color="#6a8aa0"
+            metalness={0.5}
             roughness={0.2}
             transparent
-            opacity={0.85}
+            opacity={0.75}
           />
         </mesh>
       ))}

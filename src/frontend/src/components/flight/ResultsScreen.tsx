@@ -1,19 +1,10 @@
-import {
-  Plane as BackendPlane,
-  type FlightPlan,
-  type SubmitOutcome,
-} from "@/backend";
+import type { FlightPlan } from "@/backend";
 import {
   type CrashReason,
   crashReasonMessage,
 } from "@/components/flight/flightPhysics";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useSubmitLeaderboardScore } from "@/hooks/useFlightData";
 import type { Plane, ScoreBreakdown } from "@/types/game";
-import { useInternetIdentity } from "@caffeineai/core-infrastructure";
-import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   Award,
@@ -22,10 +13,8 @@ import {
   Gauge,
   Home,
   RotateCcw,
-  Trophy,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
 
 interface ResultsScreenProps {
   score: ScoreBreakdown;
@@ -57,11 +46,6 @@ export function ResultsScreen({
   onRetry,
 }: ResultsScreenProps) {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { isAuthenticated, login, isLoggingIn } = useInternetIdentity();
-  const submitScore = useSubmitLeaderboardScore();
-  const [displayName, setDisplayName] = useState("");
-  const [submitNote, setSubmitNote] = useState<string | null>(null);
 
   const mins = Math.floor(durationSec / 60);
   const secs = Math.round(durationSec % 60);
@@ -171,94 +155,6 @@ export function ResultsScreen({
           )}
         </div>
 
-        {!crashed && plan && plane && score.total > 0 && (
-          <div
-            className="mt-5 space-y-2 rounded-md border border-primary/30 bg-primary/5 p-3"
-            data-ocid="flight.results.leaderboard"
-          >
-            <div className="flex items-center gap-2">
-              <Trophy className="h-4 w-4 text-primary" aria-hidden="true" />
-              <p className="hud-label text-[10px] text-primary">
-                Post to leaderboard
-              </p>
-            </div>
-            {!isAuthenticated ? (
-              <Button
-                type="button"
-                size="sm"
-                className="hud-label w-full gap-2"
-                onClick={() => login()}
-                disabled={isLoggingIn}
-                data-ocid="flight.results.sign_in_button"
-              >
-                {isLoggingIn
-                  ? "Opening Internet Identity…"
-                  : "Sign in with Internet Identity"}
-              </Button>
-            ) : (
-              <form
-                className="space-y-2"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  submitScore.mutate(
-                    {
-                      displayName: displayName.trim(),
-                      planName: plan.name,
-                      plane:
-                        plane.id === "CessnaSkyhawk"
-                          ? BackendPlane.cessna
-                          : BackendPlane.gulfstream,
-                      weather: plan.weather,
-                      total: BigInt(score.total),
-                    },
-                    {
-                      onSuccess: (outcome) => {
-                        void queryClient.invalidateQueries({
-                          queryKey: ["leaderboard"],
-                        });
-                        setSubmitNote(outcomeMessage(outcome));
-                      },
-                      onError: (err) =>
-                        setSubmitNote(
-                          err instanceof Error
-                            ? err.message
-                            : "Could not post score",
-                        ),
-                    },
-                  );
-                }}
-              >
-                <Label htmlFor="display-name" className="hud-label text-[10px]">
-                  Display name
-                </Label>
-                <Input
-                  id="display-name"
-                  maxLength={20}
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Callsign"
-                  className="h-8"
-                  data-ocid="flight.results.display_name"
-                />
-                <Button
-                  type="submit"
-                  size="sm"
-                  className="hud-label w-full"
-                  disabled={
-                    submitScore.isPending || displayName.trim().length === 0
-                  }
-                  data-ocid="flight.results.post_score_button"
-                >
-                  {submitScore.isPending ? "Posting…" : "Post score"}
-                </Button>
-              </form>
-            )}
-            {submitNote && (
-              <p className="text-[11px] text-muted-foreground">{submitNote}</p>
-            )}
-          </div>
-        )}
-
         {/* Actions */}
         <div className="mt-6 flex flex-col gap-2 sm:flex-row">
           <Button
@@ -283,19 +179,6 @@ export function ResultsScreen({
       </motion.div>
     </motion.div>
   );
-}
-
-function outcomeMessage(outcome: SubmitOutcome): string {
-  switch (outcome.__kind__) {
-    case "posted":
-      return `Posted as ${outcome.posted.displayName}.`;
-    case "improved":
-      return `New personal best: ${Number(outcome.improved.total)}.`;
-    case "unchanged":
-      return `Kept your better score of ${Number(outcome.unchanged.total)}.`;
-    case "tooLow":
-      return `Need ${Number(outcome.tooLow.needed)} to make the top 25.`;
-  }
 }
 
 function ScoreRow({

@@ -64,8 +64,8 @@ export function Environment({ weather }: EnvironmentProps) {
 
       {weather === "Nighttime" && (
         <>
-          <color attach="background" args={["#0c1830"]} />
-          <fog attach="fog" args={["#101c36", 140, 1400]} />
+          <color attach="background" args={["#050814"]} />
+          <fog attach="fog" args={["#050814", 100, 900]} />
           <Stars
             radius={280}
             depth={60}
@@ -137,12 +137,12 @@ export function Environment({ weather }: EnvironmentProps) {
 
       {weather === "Nighttime" && (
         <>
-          <ambientLight intensity={0.32} color="#6a82b0" />
-          <hemisphereLight args={["#6d86b8", "#1a2438", 0.48]} />
+          <ambientLight intensity={0.12} color="#1c2840" />
+          <hemisphereLight args={["#1a2848", "#05070c", 0.22]} />
           <directionalLight
             position={sunPosition}
-            intensity={0.55}
-            color="#c4d4f0"
+            intensity={0.22}
+            color="#8aa0c8"
           />
         </>
       )}

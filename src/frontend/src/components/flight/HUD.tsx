@@ -83,9 +83,6 @@ export function HUD({
     <div className="pointer-events-none absolute inset-0 z-20 select-none font-mono text-primary">
       {/* Top-center: mission progress + objective */}
       <div className="absolute left-1/2 top-4 flex -translate-x-1/2 flex-col items-center gap-1.5">
-        {nextWaypoint && phase !== "crashed" && phase !== "complete" && (
-          <NavArrow heading={heading} bearing={nextWaypoint.bearing} />
-        )}
         <div
           className="hud-scanlines glow-instrument flex items-center gap-3 rounded-md border border-primary/40 bg-card/80 px-4 py-1.5 backdrop-blur"
           data-ocid="flight.hud.mission"
@@ -322,25 +319,6 @@ export function HUD({
           <span>Brakes</span>
         </div>
       </div>
-    </div>
-  );
-}
-
-function NavArrow({ heading, bearing }: { heading: number; bearing: number }) {
-  const rel = ((((bearing - heading + 540) % 360) + 360) % 360) - 180;
-  return (
-    <div
-      className="flex flex-col items-center gap-0.5"
-      data-ocid="flight.hud.nav_arrow"
-    >
-      <div
-        className="flex h-9 w-9 items-center justify-center rounded-full border border-accent/60 bg-card/80 text-accent shadow-instrument-glow"
-        style={{ transform: `rotate(${rel}deg)` }}
-        aria-hidden="true"
-      >
-        <Navigation className="h-5 w-5" />
-      </div>
-      <span className="hud-label text-[9px] text-accent">Next gate</span>
     </div>
   );
 }

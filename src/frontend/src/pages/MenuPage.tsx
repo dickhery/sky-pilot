@@ -1,11 +1,5 @@
 import { MenuCard } from "@/components/MenuCard";
-import {
-  ClipboardList,
-  GraduationCap,
-  Plane,
-  Radar,
-  Trophy,
-} from "lucide-react";
+import { ClipboardList, GraduationCap, Plane, Radar } from "lucide-react";
 import { motion } from "motion/react";
 
 const NAV_ITEMS = [
@@ -35,15 +29,6 @@ const NAV_ITEMS = [
     to: "/flight-school" as const,
     marker: "menu.flight_school",
     accent: "primary" as const,
-  },
-  {
-    title: "Leaderboard",
-    description:
-      "See the top clean landings. Sign in with Internet Identity after a flight to post your score.",
-    icon: Trophy,
-    to: "/leaderboard" as const,
-    marker: "menu.leaderboard",
-    accent: "accent" as const,
   },
 ];
 
@@ -103,7 +88,7 @@ export function MenuPage() {
           <span className="flex items-center gap-2">
             <Radar className="h-4 w-4 text-primary" aria-hidden="true" />
             <span className="hud-label text-[10px] text-muted-foreground">
-              4&nbsp;Sectors
+              3&nbsp;Sectors
             </span>
           </span>
           <span aria-hidden="true" className="h-3 w-px bg-border" />
@@ -122,7 +107,7 @@ export function MenuPage() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4, delay: 0.2 }}
-        className="mx-auto mt-14 grid w-full max-w-5xl grid-cols-1 gap-6 sm:grid-cols-2"
+        className="mx-auto mt-14 grid w-full max-w-5xl grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
         data-ocid="menu.cards.list"
       >
         {NAV_ITEMS.map((item, i) => (

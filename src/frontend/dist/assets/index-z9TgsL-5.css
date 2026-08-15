@@ -804,6 +804,10 @@ video {
   margin-left: -0.25rem;
   margin-right: -0.25rem;
 }
+.mx-0\.5 {
+  margin-left: 0.125rem;
+  margin-right: 0.125rem;
+}
 .mx-2 {
   margin-left: 0.5rem;
   margin-right: 0.5rem;
@@ -2092,6 +2096,12 @@ video {
 .text-muted-foreground {
   --tw-text-opacity: 1;
   color: oklch(var(--muted-foreground) / var(--tw-text-opacity, 1));
+}
+.text-muted-foreground\/40 {
+  color: oklch(var(--muted-foreground) / 0.4);
+}
+.text-muted-foreground\/50 {
+  color: oklch(var(--muted-foreground) / 0.5);
 }
 .text-muted-foreground\/60 {
   color: oklch(var(--muted-foreground) / 0.6);

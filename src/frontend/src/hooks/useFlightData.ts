@@ -2,11 +2,9 @@ import { createActor } from "@/backend";
 import type {
   FlightLogView,
   FlightPlan,
-  LeaderboardEntryView,
   LogId,
   Plane,
   ScoreBreakdown,
-  SubmitOutcome,
   Weather,
 } from "@/backend";
 import { useActor } from "@caffeineai/core-infrastructure";
@@ -90,46 +88,6 @@ export function useRecordFlightLog() {
         input.plane,
         input.weather,
         input.score,
-      );
-    },
-  });
-}
-
-/**
- * Public top scores. Query-only — no authentication, one cheap read.
- */
-export function useLeaderboard() {
-  const { actor, isFetching } = useActor(createActor);
-  return useQuery<LeaderboardEntryView[]>({
-    queryKey: ["leaderboard"],
-    queryFn: async () => {
-      if (!actor) return [];
-      return actor.listLeaderboard();
-    },
-    enabled: !!actor && !isFetching,
-    staleTime: 20_000,
-  });
-}
-
-export interface SubmitLeaderboardInput {
-  displayName: string;
-  planName: string;
-  plane: Plane;
-  weather: Weather;
-  total: bigint;
-}
-
-export function useSubmitLeaderboardScore() {
-  const { actor } = useActor(createActor);
-  return useMutation<SubmitOutcome, Error, SubmitLeaderboardInput>({
-    mutationFn: async (input) => {
-      if (!actor) throw new Error("Backend actor not ready");
-      return actor.submitLeaderboardScore(
-        input.displayName,
-        input.planName,
-        input.plane,
-        input.weather,
-        input.total,
       );
     },
   });

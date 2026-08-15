@@ -96,19 +96,19 @@ export function buildSceneLayout(): SceneLayout {
       id: "climbout",
       name: "Climb-out Gate",
       position: new THREE.Vector3(0, 72, -480),
-      radius: 18,
+      radius: 16,
     },
     {
       id: "waypoint",
       name: "Course Gate",
       position: new THREE.Vector3(-300, 88, -880),
-      radius: 18,
+      radius: 16,
     },
     {
       id: "final",
       name: "Final Approach Gate",
       position: new THREE.Vector3(LANDING_RUNWAY_X, 40, -1540),
-      radius: 18,
+      radius: 16,
     },
   ];
 

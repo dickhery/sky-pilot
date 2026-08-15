@@ -10,7 +10,6 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
-export type EntryId = bigint;
 export type Error = { 'FrontendOriginsNotConfigured' : null } |
   {
     'MixedSsoSources' : {
@@ -49,37 +48,17 @@ export interface FlightPlan {
   'routeDescription' : string,
   'name' : string,
   'waypoint' : Waypoint,
-  'plane' : Plane__2,
+  'plane' : Plane__1,
   'weather' : Weather,
   'departure' : Runway,
   'landing' : Runway,
-}
-export interface LeaderboardEntry {
-  'id' : EntryId,
-  'total' : bigint,
-  'displayName' : string,
-  'playerId' : Principal,
-  'submittedAt' : bigint,
-  'plane' : Plane,
-  'weather' : Weather,
-  'planName' : string,
-}
-export interface LeaderboardEntryView {
-  'id' : EntryId,
-  'total' : bigint,
-  'displayName' : string,
-  'playerId' : Principal,
-  'submittedAt' : bigint,
-  'plane' : Plane,
-  'weather' : Weather,
-  'planName' : string,
 }
 export type LogId = bigint;
 export type PlanId = bigint;
 export type Plane = { 'cessna' : null } |
   { 'gulfstream' : null };
 export type PlaneId = bigint;
-export interface Plane__2 {
+export interface Plane__1 {
   'id' : PlaneId,
   'name' : string,
   'handling' : string,
@@ -93,10 +72,6 @@ export interface ScoreBreakdown {
   'total' : bigint,
   'speed' : bigint,
 }
-export type SubmitOutcome = { 'tooLow' : { 'needed' : bigint } } |
-  { 'unchanged' : LeaderboardEntryView } |
-  { 'improved' : LeaderboardEntryView } |
-  { 'posted' : LeaderboardEntryView };
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
@@ -110,11 +85,6 @@ export interface _SERVICE {
     [[] | [bigint], [] | [bigint]],
     Array<FlightLog>
   >,
-  '__leaderboard' : ActorMethod<
-    [[] | [bigint], [] | [bigint]],
-    Array<LeaderboardEntry>
-  >,
-  '__nextLeaderboardId' : ActorMethod<[], any>,
   '__nextLogId' : ActorMethod<[], any>,
   '_initialize_access_control' : ActorMethod<[], undefined>,
   '_internet_identity_sign_in_finish' : ActorMethod<[], Result>,
@@ -126,16 +96,11 @@ export interface _SERVICE {
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'listFlightLogs' : ActorMethod<[], Array<FlightLogView>>,
   'listFlightPlans' : ActorMethod<[], Array<FlightPlan>>,
-  'listLeaderboard' : ActorMethod<[], Array<LeaderboardEntryView>>,
-  'listPlanes' : ActorMethod<[], Array<Plane__2>>,
+  'listPlanes' : ActorMethod<[], Array<Plane__1>>,
   'listWeather' : ActorMethod<[], Array<Weather>>,
   'recordFlightLog' : ActorMethod<
     [bigint, string, Plane, Weather, ScoreBreakdown],
     FlightLogView
-  >,
-  'submitLeaderboardScore' : ActorMethod<
-    [string, string, Plane, Weather, bigint],
-    SubmitOutcome
   >,
 }
 export declare const idlService: IDL.ServiceClass;

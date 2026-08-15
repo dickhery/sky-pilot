@@ -33,17 +33,6 @@ export const FlightLog = IDL.Record({
   'weather' : Weather,
   'planName' : IDL.Text,
 });
-export const EntryId = IDL.Nat;
-export const LeaderboardEntry = IDL.Record({
-  'id' : EntryId,
-  'total' : IDL.Nat,
-  'displayName' : IDL.Text,
-  'playerId' : IDL.Principal,
-  'submittedAt' : IDL.Int,
-  'plane' : Plane,
-  'weather' : Weather,
-  'planName' : IDL.Text,
-});
 export const Error = IDL.Variant({
   'FrontendOriginsNotConfigured' : IDL.Null,
   'MixedSsoSources' : IDL.Record({
@@ -86,7 +75,7 @@ export const Waypoint = IDL.Record({
   'description' : IDL.Text,
 });
 export const PlaneId = IDL.Nat;
-export const Plane__2 = IDL.Record({
+export const Plane__1 = IDL.Record({
   'id' : PlaneId,
   'name' : IDL.Text,
   'handling' : IDL.Text,
@@ -100,26 +89,10 @@ export const FlightPlan = IDL.Record({
   'routeDescription' : IDL.Text,
   'name' : IDL.Text,
   'waypoint' : Waypoint,
-  'plane' : Plane__2,
+  'plane' : Plane__1,
   'weather' : Weather,
   'departure' : Runway,
   'landing' : Runway,
-});
-export const LeaderboardEntryView = IDL.Record({
-  'id' : EntryId,
-  'total' : IDL.Nat,
-  'displayName' : IDL.Text,
-  'playerId' : IDL.Principal,
-  'submittedAt' : IDL.Int,
-  'plane' : Plane,
-  'weather' : Weather,
-  'planName' : IDL.Text,
-});
-export const SubmitOutcome = IDL.Variant({
-  'tooLow' : IDL.Record({ 'needed' : IDL.Nat }),
-  'unchanged' : LeaderboardEntryView,
-  'improved' : LeaderboardEntryView,
-  'posted' : LeaderboardEntryView,
 });
 
 export const idlService = IDL.Service({
@@ -129,12 +102,6 @@ export const idlService = IDL.Service({
       [IDL.Vec(FlightLog)],
       ['query'],
     ),
-  '__leaderboard' : IDL.Func(
-      [IDL.Opt(IDL.Nat), IDL.Opt(IDL.Nat)],
-      [IDL.Vec(LeaderboardEntry)],
-      ['query'],
-    ),
-  '__nextLeaderboardId' : IDL.Func([], [IDL.Reserved], ['query']),
   '__nextLogId' : IDL.Func([], [IDL.Reserved], ['query']),
   '_initialize_access_control' : IDL.Func([], [], []),
   '_internet_identity_sign_in_finish' : IDL.Func([], [Result], []),
@@ -146,17 +113,11 @@ export const idlService = IDL.Service({
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'listFlightLogs' : IDL.Func([], [IDL.Vec(FlightLogView)], ['query']),
   'listFlightPlans' : IDL.Func([], [IDL.Vec(FlightPlan)], ['query']),
-  'listLeaderboard' : IDL.Func([], [IDL.Vec(LeaderboardEntryView)], ['query']),
-  'listPlanes' : IDL.Func([], [IDL.Vec(Plane__2)], ['query']),
+  'listPlanes' : IDL.Func([], [IDL.Vec(Plane__1)], ['query']),
   'listWeather' : IDL.Func([], [IDL.Vec(Weather)], ['query']),
   'recordFlightLog' : IDL.Func(
       [IDL.Int, IDL.Text, Plane, Weather, ScoreBreakdown],
       [FlightLogView],
-      [],
-    ),
-  'submitLeaderboardScore' : IDL.Func(
-      [IDL.Text, IDL.Text, Plane, Weather, IDL.Nat],
-      [SubmitOutcome],
       [],
     ),
 });
@@ -182,17 +143,6 @@ export const idlFactory = ({ IDL }) => {
     'completedAt' : IDL.Int,
     'playerId' : PlayerId,
     'score' : ScoreBreakdown,
-    'plane' : Plane,
-    'weather' : Weather,
-    'planName' : IDL.Text,
-  });
-  const EntryId = IDL.Nat;
-  const LeaderboardEntry = IDL.Record({
-    'id' : EntryId,
-    'total' : IDL.Nat,
-    'displayName' : IDL.Text,
-    'playerId' : IDL.Principal,
-    'submittedAt' : IDL.Int,
     'plane' : Plane,
     'weather' : Weather,
     'planName' : IDL.Text,
@@ -236,7 +186,7 @@ export const idlFactory = ({ IDL }) => {
   const PlanId = IDL.Nat;
   const Waypoint = IDL.Record({ 'name' : IDL.Text, 'description' : IDL.Text });
   const PlaneId = IDL.Nat;
-  const Plane__2 = IDL.Record({
+  const Plane__1 = IDL.Record({
     'id' : PlaneId,
     'name' : IDL.Text,
     'handling' : IDL.Text,
@@ -247,26 +197,10 @@ export const idlFactory = ({ IDL }) => {
     'routeDescription' : IDL.Text,
     'name' : IDL.Text,
     'waypoint' : Waypoint,
-    'plane' : Plane__2,
+    'plane' : Plane__1,
     'weather' : Weather,
     'departure' : Runway,
     'landing' : Runway,
-  });
-  const LeaderboardEntryView = IDL.Record({
-    'id' : EntryId,
-    'total' : IDL.Nat,
-    'displayName' : IDL.Text,
-    'playerId' : IDL.Principal,
-    'submittedAt' : IDL.Int,
-    'plane' : Plane,
-    'weather' : Weather,
-    'planName' : IDL.Text,
-  });
-  const SubmitOutcome = IDL.Variant({
-    'tooLow' : IDL.Record({ 'needed' : IDL.Nat }),
-    'unchanged' : LeaderboardEntryView,
-    'improved' : LeaderboardEntryView,
-    'posted' : LeaderboardEntryView,
   });
   
   return IDL.Service({
@@ -276,12 +210,6 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(FlightLog)],
         ['query'],
       ),
-    '__leaderboard' : IDL.Func(
-        [IDL.Opt(IDL.Nat), IDL.Opt(IDL.Nat)],
-        [IDL.Vec(LeaderboardEntry)],
-        ['query'],
-      ),
-    '__nextLeaderboardId' : IDL.Func([], [IDL.Reserved], ['query']),
     '__nextLogId' : IDL.Func([], [IDL.Reserved], ['query']),
     '_initialize_access_control' : IDL.Func([], [], []),
     '_internet_identity_sign_in_finish' : IDL.Func([], [Result], []),
@@ -293,21 +221,11 @@ export const idlFactory = ({ IDL }) => {
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'listFlightLogs' : IDL.Func([], [IDL.Vec(FlightLogView)], ['query']),
     'listFlightPlans' : IDL.Func([], [IDL.Vec(FlightPlan)], ['query']),
-    'listLeaderboard' : IDL.Func(
-        [],
-        [IDL.Vec(LeaderboardEntryView)],
-        ['query'],
-      ),
-    'listPlanes' : IDL.Func([], [IDL.Vec(Plane__2)], ['query']),
+    'listPlanes' : IDL.Func([], [IDL.Vec(Plane__1)], ['query']),
     'listWeather' : IDL.Func([], [IDL.Vec(Weather)], ['query']),
     'recordFlightLog' : IDL.Func(
         [IDL.Int, IDL.Text, Plane, Weather, ScoreBreakdown],
         [FlightLogView],
-        [],
-      ),
-    'submitLeaderboardScore' : IDL.Func(
-        [IDL.Text, IDL.Text, Plane, Weather, IDL.Nat],
-        [SubmitOutcome],
         [],
       ),
   });

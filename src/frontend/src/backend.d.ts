@@ -12,25 +12,10 @@ export interface ScoreBreakdown {
     total: bigint;
     speed: bigint;
 }
-export interface LeaderboardEntryView {
-    id: EntryId;
-    total: bigint;
-    displayName: string;
-    playerId: Principal;
-    submittedAt: bigint;
-    plane: Plane;
-    weather: Weather;
-    planName: string;
-}
-export interface LeaderboardEntry {
-    id: EntryId;
-    total: bigint;
-    displayName: string;
-    playerId: Principal;
-    submittedAt: bigint;
-    plane: Plane;
-    weather: Weather;
-    planName: string;
+export interface Plane__1 {
+    id: PlaneId;
+    name: string;
+    handling: string;
 }
 export type Error_ = {
     __kind__: "FrontendOriginsNotConfigured";
@@ -86,27 +71,22 @@ export interface FlightLog {
     weather: Weather;
     planName: string;
 }
-export interface Waypoint {
-    name: string;
-    description: string;
-}
-export type LogId = bigint;
-export interface Plane__2 {
-    id: PlaneId;
-    name: string;
-    handling: string;
-}
-export type PlayerId = Principal;
 export interface FlightPlan {
     id: PlanId;
     routeDescription: string;
     name: string;
     waypoint: Waypoint;
-    plane: Plane__2;
+    plane: Plane__1;
     weather: Weather;
     departure: Runway;
     landing: Runway;
 }
+export interface Waypoint {
+    name: string;
+    description: string;
+}
+export type LogId = bigint;
+export type PlayerId = Principal;
 export type Result = {
     __kind__: "ok";
     ok: null;
@@ -114,22 +94,6 @@ export type Result = {
     __kind__: "err";
     err: Error_;
 };
-export type SubmitOutcome = {
-    __kind__: "tooLow";
-    tooLow: {
-        needed: bigint;
-    };
-} | {
-    __kind__: "unchanged";
-    unchanged: LeaderboardEntryView;
-} | {
-    __kind__: "improved";
-    improved: LeaderboardEntryView;
-} | {
-    __kind__: "posted";
-    posted: LeaderboardEntryView;
-};
-export type EntryId = bigint;
 export interface FlightLogView {
     id: LogId;
     completedAt: bigint;
@@ -166,9 +130,7 @@ export interface backendInterface {
     isCallerAdmin(): Promise<boolean>;
     listFlightLogs(): Promise<Array<FlightLogView>>;
     listFlightPlans(): Promise<Array<FlightPlan>>;
-    listLeaderboard(): Promise<Array<LeaderboardEntryView>>;
-    listPlanes(): Promise<Array<Plane__2>>;
+    listPlanes(): Promise<Array<Plane__1>>;
     listWeather(): Promise<Array<Weather>>;
     recordFlightLog(completedAt: bigint, planName: string, plane: Plane, weather: Weather, score: ScoreBreakdown): Promise<FlightLogView>;
-    submitLeaderboardScore(displayName: string, planName: string, plane: Plane, weather: Weather, total: bigint): Promise<SubmitOutcome>;
 }

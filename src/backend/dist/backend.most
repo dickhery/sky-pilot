@@ -1,16 +1,10 @@
 // Version: 4.0.0
-type AccessControlState__354538448 =
-  {
-    var adminAssigned : Bool;
-    userRoles : Map__246123559<Principal, UserRole__469474784>
-  };
 type AccessControlState__644643789 =
   {
     var adminAssigned : Bool;
     userRoles : Map__246123559<Principal, UserRole__316535459>
   };
 type Data__552063367<K, V> = {var count : Nat__93962160; kvs : [var ?(K, V)]};
-type EntryId__941688230 = Nat;
 type FlightLog__734248493 =
   {
     completedAt : Int;
@@ -31,40 +25,8 @@ type FlightLog__841286554 =
     score : ScoreBreakdown__440512806;
     weather : Weather__759430080
   };
-type FlightLog__92782127 =
-  {
-    completedAt : Int;
-    id : Nat;
-    planName : Text;
-    plane : Plane__745025984;
-    playerId : Principal;
-    score : ScoreBreakdown__603046772;
-    weather : Weather__1064888022
-  };
 type Internal__455405067<K, V> =
   {children : [var ?Node__279997185<K, V>]; data : Data__552063367<K, V>};
-type LeaderboardEntry__684075585 =
-  {
-    displayName : Text;
-    id : EntryId__941688230;
-    planName : Text;
-    plane : Plane__972987085;
-    playerId : Principal;
-    submittedAt : Int;
-    total : Nat;
-    weather : Weather__401050988
-  };
-type LeaderboardEntry__992425749 =
-  {
-    displayName : Text;
-    id : Nat;
-    planName : Text;
-    plane : Plane__745025984;
-    playerId : Principal;
-    submittedAt : Int;
-    total : Nat;
-    weather : Weather__1064888022
-  };
 type Leaf__114713147<K, V> = {data : Data__552063367<K, V>};
 type List__716101829<T> =
   {
@@ -80,14 +42,6 @@ type Map__719753394<K, V> =
   {var root : Node__279997185<K, V>; var size : Nat__93962160};
 type Nat__920180692 = Nat;
 type Nat__93962160 = Nat__920180692;
-type NewActor__269442543 =
-  {
-    accessControlState : AccessControlState__354538448;
-    flightLogs : List__852723865<FlightLog__92782127>;
-    leaderboard : List__852723865<LeaderboardEntry__992425749>;
-    nextLeaderboardId : {var value : Nat};
-    nextLogId : {var value : Nat}
-  };
 type NewActor__991022820 =
   {
     accessControlState : AccessControlState__644643789;
@@ -97,33 +51,19 @@ type NewActor__991022820 =
 type Node__279997185<K, V> =
   {#internal : Internal__455405067<K, V>; #leaf : Leaf__114713147<K, V>};
 type OldActor__50622083 = {};
-type OldActor__525314286 =
-  {
-    accessControlState : AccessControlState__354538448;
-    flightLogs : List__852723865<FlightLog__92782127>;
-    nextLogId : {var value : Nat}
-  };
 type Plane__157403377 = {#cessna; #gulfstream};
 type Plane__345530652 = {#cessna; #gulfstream};
-type Plane__745025984 = {#cessna; #gulfstream};
-type Plane__972987085 = Plane__157403377;
 type PlayerId__710531919 = Principal;
 type ScoreBreakdown__338068372 =
   {landingSmoothness : Nat; speed : Nat; total : Nat};
 type ScoreBreakdown__440512806 =
   {landingSmoothness : Nat; speed : Nat; total : Nat};
-type ScoreBreakdown__603046772 =
-  {landingSmoothness : Nat; speed : Nat; total : Nat};
 type UserRole__316535459 = {#admin; #guest; #user};
-type UserRole__469474784 = {#admin; #guest; #user};
 type UserRole__686137147 = {#admin; #guest; #user};
-type Weather__1064888022 = {#daytime; #nighttime; #partlyCloudy};
-type Weather__401050988 = Weather__759430080;
 type Weather__759430080 = {#daytime; #nighttime; #partlyCloudy};
 type Weather__936411332 = {#daytime; #nighttime; #partlyCloudy};
 {
-  "20260702_000000" : (_old : OldActor__50622083) -> NewActor__991022820;
-  "20260814_120000" : (old : OldActor__525314286) -> NewActor__269442543
+  "20260702_000000" : (_old : OldActor__50622083) -> NewActor__991022820
 }
 actor  {
   stable accessControlState :
@@ -137,12 +77,5 @@ actor  {
       var blocks : [var [var ?FlightLog__841286554]];
       var elementIndex : Nat__93962160
     };
-  stable leaderboard :
-    {
-      var blockIndex : Nat__93962160;
-      var blocks : [var [var ?LeaderboardEntry__684075585]];
-      var elementIndex : Nat__93962160
-    };
-  stable nextLeaderboardId : {var value : Nat};
   stable nextLogId : {var value : Nat}
 };
