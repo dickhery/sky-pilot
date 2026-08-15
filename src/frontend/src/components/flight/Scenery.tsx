@@ -343,34 +343,44 @@ function PlacedInstances({
 }
 
 /**
- * Distant ridgeline — a displaced strip so the horizon reads as mountains
- * instead of four-sided cones.
+ * Horizon ridgeline that sits on the ground. The previous vertical plane
+ * left a flat grey face (a giant wall) because unused vertices stayed in
+ * the XY plane. This strip is horizontal; height only goes up.
  */
 export function DistantMountains({ theme }: { theme: MapTheme }) {
   const geometry = useMemo(() => {
-    const geo = new THREE.PlaneGeometry(1100, 280, 70, 18);
+    const width = 2600;
+    const depth = 420;
+    const geo = new THREE.PlaneGeometry(width, depth, 88, 20);
     const pos = geo.attributes.position;
     const colors = new Float32Array(pos.count * 3);
     const color = new THREE.Color();
+    const halfW = width * 0.5;
+    const halfD = depth * 0.5;
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i);
       const y = pos.getY(i);
-      const nx = x / 550;
+      const nx = x / halfW;
+      const along = THREE.MathUtils.clamp((y + halfD) / depth, 0, 1);
       const ridge =
-        (Math.cos(nx * Math.PI * 1.6) * 0.5 + 0.5) * 78 +
-        Math.sin(nx * 9.2) * 18 +
-        Math.sin(nx * 17) * 8;
-      const falloff = THREE.MathUtils.smoothstep(-140, 40, y);
-      const h = ridge * falloff;
+        (Math.cos(nx * Math.PI * 1.5) * 0.5 + 0.5) * 86 +
+        Math.sin(nx * 8.4) * 20 +
+        Math.sin(nx * 16) * 8;
+      const side =
+        THREE.MathUtils.smoothstep(-1, -0.72, nx) *
+        THREE.MathUtils.smoothstep(1, 0.72, -nx);
+      const profile = Math.sin(along * Math.PI);
+      const h = Math.max(0, ridge * profile * side);
       pos.setZ(i, h);
-      const snow = h > 58 ? THREE.MathUtils.clamp((h - 58) / 22, 0, 1) : 0;
-      color.setRGB(
-        THREE.MathUtils.lerp(0.38, 0.9, snow),
-        THREE.MathUtils.lerp(0.42, 0.92, snow),
-        THREE.MathUtils.lerp(0.46, 0.94, snow),
-      );
-      if (h < 22) {
-        color.setRGB(0.32, 0.4, 0.34);
+      const snow = h > 62 ? THREE.MathUtils.clamp((h - 62) / 20, 0, 1) : 0;
+      if (h < 10) {
+        color.setRGB(0.28, 0.38, 0.26);
+      } else {
+        color.setRGB(
+          THREE.MathUtils.lerp(0.34, 0.88, snow),
+          THREE.MathUtils.lerp(0.4, 0.9, snow),
+          THREE.MathUtils.lerp(0.32, 0.92, snow),
+        );
       }
       colors[i * 3] = color.r;
       colors[i * 3 + 1] = color.g;
@@ -381,24 +391,20 @@ export function DistantMountains({ theme }: { theme: MapTheme }) {
     return geo;
   }, []);
 
+  const position: [number, number, number] =
+    theme === "ridge"
+      ? [180, -0.4, -2140]
+      : theme === "city"
+        ? [-120, -0.4, 980]
+        : [40, -0.4, -2320];
+
   return (
     <mesh
       geometry={geometry}
-      position={
-        theme === "ridge"
-          ? [180, -4, -2100]
-          : theme === "city"
-            ? [-120, -4, 900]
-            : [40, -4, -2280]
-      }
-      rotation={[0, theme === "city" ? Math.PI : 0, 0]}
+      position={position}
+      rotation={[-Math.PI / 2, 0, 0]}
     >
-      <meshStandardMaterial
-        vertexColors
-        roughness={0.95}
-        metalness={0}
-        side={THREE.DoubleSide}
-      />
+      <meshStandardMaterial vertexColors roughness={0.95} metalness={0} />
     </mesh>
   );
 }

@@ -1,5 +1,5 @@
 import type { Weather } from "@/types/game";
-import { Cloud, Clouds, ContactShadows, Stars } from "@react-three/drei";
+import { Cloud, Clouds, Stars } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
@@ -255,17 +255,6 @@ export function Environment({ weather }: EnvironmentProps) {
             castShadow={false}
           />
         </>
-      )}
-
-      {weather !== "Nighttime" && (
-        <ContactShadows
-          position={[0, 0.01, -40]}
-          opacity={0.35}
-          scale={220}
-          blur={2.4}
-          far={12}
-          frames={1}
-        />
       )}
     </>
   );

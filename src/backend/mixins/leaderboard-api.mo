@@ -6,12 +6,13 @@ mixin (
   entries : List.List<Types.LeaderboardEntry>,
   nextEntryId : { var value : Nat },
 ) {
-  /// Public query of the top scores. Cheap read — no authentication.
+  /// Public query of the top scores for every catalog map. Cheap read —
+  /// no authentication, one call for the whole board.
   public query func listLeaderboard() : async [Types.LeaderboardEntryView] {
     Leaderboard.listTop(entries);
   };
 
-  /// Post a completed flight's total to the board. Requires Internet Identity.
+  /// Post a completed flight's total to that map's board. Requires Internet Identity.
   public shared ({ caller }) func submitLeaderboardScore(
     displayName : Text,
     planName : Text,

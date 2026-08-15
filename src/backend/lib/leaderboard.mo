@@ -1,3 +1,4 @@
+import FlightPlans "flight-plans";
 import List "mo:core/List";
 import Nat "mo:core/Nat";
 import Principal "mo:core/Principal";
@@ -10,22 +11,23 @@ module {
   public type LeaderboardEntryView = Types.LeaderboardEntryView;
   public type SubmitOutcome = Types.SubmitOutcome;
 
-  /// Hard cap so the canister cannot grow without bound.
-  public let maxEntries : Nat = 25;
+  /// Hard cap per catalog map so the canister cannot grow without bound.
+  /// Six plans × 10 = 60 rows max.
+  public let maxEntriesPerPlan : Nat = 10;
   public let maxNameChars : Nat = 20;
 
-  /// Public query payload — at most `maxEntries`, highest total first.
+  /// Public query payload — top `maxEntriesPerPlan` per known flight plan,
+  /// highest total first within each map. One query, no extra update cost.
   public func listTop(entries : List.List<LeaderboardEntry>) : [LeaderboardEntryView] {
-    let sorted = entries.toArray().sort(compareByTotalDesc);
-    if (sorted.size() <= maxEntries) {
-      sorted;
-    } else {
-      sorted.sliceToArray(0, maxEntries);
+    var out : [LeaderboardEntryView] = [];
+    for (plan in FlightPlans.plans.values()) {
+      out := out.concat(topForPlan(entries, plan.name));
     };
+    out;
   };
 
-  /// Authenticated submit. One row per principal; only a better total replaces
-  /// an existing row. The board never exceeds `maxEntries`.
+  /// Authenticated submit. One row per principal per map; only a better
+  /// total replaces that map's existing row. Each map is capped independently.
   public func submit(
     entries : List.List<LeaderboardEntry>,
     nextId : { var value : Nat },
@@ -42,10 +44,17 @@ module {
     if (total > 100) {
       Runtime.trap("score must be 0-100");
     };
+    if (not isKnownPlan(planName)) {
+      Runtime.trap("unknown flight plan");
+    };
     let name = sanitizeName(displayName);
 
     switch (
-      entries.find(func(e : LeaderboardEntry) : Bool { Principal.equal(e.playerId, caller) })
+      entries.find(
+        func(e : LeaderboardEntry) : Bool {
+          Principal.equal(e.playerId, caller) and e.planName == planName
+        }
+      )
     ) {
       case (?existing) {
         if (total <= existing.total) {
@@ -61,12 +70,15 @@ module {
           total;
           submittedAt = Time.now();
         };
-        replacePlayer(entries, updated);
+        replacePlayerOnPlan(entries, updated);
         #improved(updated);
       };
       case null {
-        if (entries.size() >= maxEntries) {
-          let lowest = entries.min(compareByTotalAsc);
+        let onPlan = entries.filter(
+          func(e : LeaderboardEntry) : Bool { e.planName == planName }
+        );
+        if (onPlan.size() >= maxEntriesPerPlan) {
+          let lowest = onPlan.min(compareByTotalAsc);
           switch (lowest) {
             case (?low) {
               if (total <= low.total) {
@@ -92,6 +104,21 @@ module {
         entries.add(posted);
         #posted(posted);
       };
+    };
+  };
+
+  func isKnownPlan(name : Text) : Bool {
+    FlightPlans.plans.find(func(p : FlightPlans.FlightPlan) : Bool { p.name == name }) != null;
+  };
+
+  func topForPlan(entries : List.List<LeaderboardEntry>, planName : Text) : [LeaderboardEntryView] {
+    let sorted = entries.toArray().filter(
+      func(e : LeaderboardEntry) : Bool { e.planName == planName }
+    ).sort(compareByTotalDesc);
+    if (sorted.size() <= maxEntriesPerPlan) {
+      sorted;
+    } else {
+      sorted.sliceToArray(0, maxEntriesPerPlan);
     };
   };
 
@@ -122,11 +149,11 @@ module {
     name;
   };
 
-  func replacePlayer(entries : List.List<LeaderboardEntry>, next : LeaderboardEntry) {
+  func replacePlayerOnPlan(entries : List.List<LeaderboardEntry>, next : LeaderboardEntry) {
     let snapshot = entries.toArray();
     entries.clear();
     for (entry in snapshot.values()) {
-      if (Principal.equal(entry.playerId, next.playerId)) {
+      if (Principal.equal(entry.playerId, next.playerId) and entry.planName == next.planName) {
         entries.add(next);
       } else {
         entries.add(entry);

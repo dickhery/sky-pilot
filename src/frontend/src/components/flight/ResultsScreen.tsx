@@ -294,7 +294,7 @@ function outcomeMessage(outcome: SubmitOutcome): string {
     case "unchanged":
       return `Kept your better score of ${Number(outcome.unchanged.total)}.`;
     case "tooLow":
-      return `Need ${Number(outcome.tooLow.needed)} to make the top 25.`;
+      return `Need ${Number(outcome.tooLow.needed)} to make the top 10 on this map.`;
   }
 }
 
