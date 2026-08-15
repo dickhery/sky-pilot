@@ -49,7 +49,9 @@ const KEY_MAP: Record<
   Space: "brakes",
 };
 
-export function useFlightControls(): FlightControls {
+export function useFlightControls(options?: {
+  enabled?: boolean;
+}): FlightControls {
   const axes = useRef<ControlAxes>({
     pitch: 0,
     roll: 0,
@@ -67,6 +69,18 @@ export function useFlightControls(): FlightControls {
   const [throttlePct, setThrottlePct] = useState(25);
   const [brakesOn, setBrakesOn] = useState(false);
   const [cockpitView, setCockpitView] = useState(false);
+  const enabled = options?.enabled ?? true;
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
+
+  useEffect(() => {
+    if (enabled) return;
+    keys.current.clear();
+    axes.current.pitch = 0;
+    axes.current.roll = 0;
+    axes.current.brakes = false;
+    setBrakesOn(false);
+  }, [enabled]);
 
   useEffect(() => {
     const readTargets = () => {
@@ -121,6 +135,10 @@ export function useFlightControls(): FlightControls {
     frame = requestAnimationFrame(tick);
 
     const onKeyDown = (e: KeyboardEvent) => {
+      if (!enabledRef.current || isTypingTarget(e.target)) {
+        keys.current.clear();
+        return;
+      }
       if (e.code === "KeyC" && !e.repeat) {
         e.preventDefault();
         setCockpitView((v) => !v);
@@ -139,7 +157,7 @@ export function useFlightControls(): FlightControls {
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
-      if (!KEY_MAP[e.code]) return;
+      if (isTypingTarget(e.target) || !KEY_MAP[e.code]) return;
       keys.current.delete(e.code);
     };
 
@@ -170,4 +188,12 @@ export function useFlightControls(): FlightControls {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+/** Let the name field (and any other text control) keep letters like C. */
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  const tag = target.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
 }

@@ -60,8 +60,9 @@ export function FlightSimulationPage() {
   const setPhase = useGameStore((s) => s.setPhase);
   const setScore = useGameStore((s) => s.setScore);
 
+  const [showResults, setShowResults] = useState(false);
   const { axes, touch, throttlePct, brakesOn, cockpitView, toggleCockpit } =
-    useFlightControls();
+    useFlightControls({ enabled: !showResults });
 
   const planId = selectedPlan ? Number(selectedPlan.id) : 1;
   const layout = useMemo(() => buildSceneLayout(planId), [planId]);
@@ -97,7 +98,6 @@ export function FlightSimulationPage() {
     runwayAlignment: 0,
     total: 0,
   });
-  const [showResults, setShowResults] = useState(false);
   const [persisted, setPersisted] = useState(false);
   const [finalDuration, setFinalDuration] = useState(0);
 
