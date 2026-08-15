@@ -60,7 +60,8 @@ export function FlightSimulationPage() {
 
   const { axes, throttlePct, brakesOn } = useFlightControls();
 
-  const layout = useMemo(buildSceneLayout, []);
+  const planId = selectedPlan ? Number(selectedPlan.id) : 1;
+  const layout = useMemo(() => buildSceneLayout(planId), [planId]);
 
   const flightState = useRef(createInitialFlightState(layout));
 
@@ -215,11 +216,15 @@ export function FlightSimulationPage() {
     );
   }
 
+  const landingHdg = Math.round(
+    ((THREE.MathUtils.radToDeg(layout.landingHeading) % 360) + 360) % 360,
+  );
   const { objective, subObjective } = getMissionBrief(
     phase,
     telemetry.airborne,
     selectedPlan.waypoint.name,
     selectedPlan.landing.name,
+    landingHdg,
   );
 
   const handleRetry = () => {
@@ -241,6 +246,7 @@ export function FlightSimulationPage() {
       <FlightScene
         plane={selectedPlane}
         weather={mapWeatherToFrontend(selectedPlan.weather)}
+        layout={layout}
         controlsAxes={axes}
         flightState={flightState}
         onPhaseChange={handlePhaseChange}
@@ -281,6 +287,7 @@ function getMissionBrief(
   airborne: boolean,
   waypointName: string,
   landingName: string,
+  landingHdg: number,
 ): { objective: string; subObjective?: string } {
   switch (phase) {
     case "takeoff":
@@ -302,7 +309,7 @@ function getMissionBrief(
     case "landing":
       return {
         objective: `Land on ${landingName}`,
-        subObjective: `Line up heading 000° · slow to ${APPROACH_SPEED_KTS} kt · flare with W. A bad landing is a crash.`,
+        subObjective: `Line up heading ${landingHdg.toString().padStart(3, "0")}° · slow to ${APPROACH_SPEED_KTS} kt · flare with W. A bad landing is a crash.`,
       };
     case "crashed":
       return { objective: "Flight over — the aircraft is down" };

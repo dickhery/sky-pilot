@@ -1,3 +1,6 @@
+import { isOnStrip } from "@/components/flight/flightPhysics";
+import type { MapTheme, SceneLayout } from "@/components/flight/mapLayouts";
+import { apronBeside } from "@/components/flight/mapLayouts";
 import { MeshReflectorMaterial } from "@react-three/drei";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
@@ -41,23 +44,43 @@ function makeGrassTexture(): THREE.CanvasTexture {
   return tex;
 }
 
-function isRunwayCorridor(x: number, z: number): boolean {
-  const dep = Math.abs(x) < 18 && z > -170 && z < 170;
-  const land = Math.abs(x - 110) < 18 && z < -1720 && z > -2020;
-  return dep || land;
+const _probe = new THREE.Vector3();
+
+function isRunwayCorridor(layout: SceneLayout, x: number, z: number): boolean {
+  _probe.set(x, 0, z);
+  return (
+    isOnStrip(_probe, layout.departureStart, layout.departureEnd, 22, 20, 20) ||
+    isOnStrip(_probe, layout.landingThreshold, layout.landingEnd, 22, 20, 20)
+  );
 }
 
-function isLake(x: number, z: number): boolean {
-  const dx = x + 68;
-  const dz = z - 8;
-  return dx * dx + dz * dz < 40 * 40;
+function waterScore(theme: MapTheme, x: number, z: number): number {
+  if (theme === "coast") {
+    return x < -80 ? THREE.MathUtils.smoothstep(-40, -160, -x) : 0;
+  }
+  if (theme === "harbor") {
+    const d = Math.hypot(x - 480, z + 40);
+    return THREE.MathUtils.smoothstep(220, 80, d);
+  }
+  if (theme === "storm") {
+    const d = Math.hypot(x - 480, z - 80);
+    return THREE.MathUtils.smoothstep(380, 140, d);
+  }
+  if (theme === "valley") {
+    return Math.abs(x + 20) < 28 ? 0.7 : 0;
+  }
+  if (theme === "city") {
+    const d = Math.hypot(x + 40, z - 200);
+    return THREE.MathUtils.smoothstep(90, 40, d);
+  }
+  return 0;
 }
 
 /**
  * Rolling countryside with vertex-colored fields, dirt around the runways,
  * and a flattened lake basin. Smooth-shaded — no flat faceting.
  */
-export function Terrain() {
+export function Terrain({ layout }: { layout: SceneLayout }) {
   const { geometry, texture } = useMemo(() => {
     const size = 4000;
     const segments = 96;
@@ -93,37 +116,40 @@ export function Terrain() {
       const worldX = x;
       const worldZ = -y - 900;
 
+      const theme = layout.theme;
+      const hillAmp =
+        theme === "ridge"
+          ? 16
+          : theme === "valley"
+            ? 14
+            : theme === "city"
+              ? 3
+              : 7;
       const hill =
-        Math.sin(worldX * 0.008 + worldZ * 0.006) * 7 +
-        Math.sin(worldX * 0.018 - worldZ * 0.012) * 3.4 +
-        Math.cos(worldZ * 0.014 + worldX * 0.01) * 4.2 +
-        Math.sin(worldX * 0.035) * 1.4;
+        Math.sin(worldX * 0.008 + worldZ * 0.006) * hillAmp +
+        Math.sin(worldX * 0.018 - worldZ * 0.012) * hillAmp * 0.45 +
+        Math.cos(worldZ * 0.014 + worldX * 0.01) * hillAmp * 0.55 +
+        Math.sin(worldX * 0.035) * hillAmp * 0.18;
+      const valleyWall =
+        theme === "valley" ? Math.max(0, Math.abs(worldX - 80) - 90) * 0.12 : 0;
 
-      const distDep = Math.min(Math.abs(worldX), Math.abs(worldX - 110) * 0.75);
-      const t = THREE.MathUtils.clamp(distDep / 40, 0, 1);
-      const flatten = t * t * (3 - 2 * t);
-
-      let height = hill * flatten * (0.45 + rand() * 0.12);
-
-      const dxL = worldX + 68;
-      const dzL = worldZ - 8;
-      const lakeD = Math.hypot(dxL, dzL);
-      if (lakeD < 44) {
-        const basin = 1 - THREE.MathUtils.smoothstep(32, 44, lakeD);
-        height = THREE.MathUtils.lerp(height, -0.35, basin);
+      let height = (hill * 0.35 + valleyWall) * (0.5 + rand() * 0.12);
+      const wet = waterScore(theme, worldX, worldZ);
+      if (wet > 0.15) {
+        height = THREE.MathUtils.lerp(height, -0.4, wet);
       }
 
-      if (isRunwayCorridor(worldX, worldZ)) {
-        height *= 0.05;
+      if (isRunwayCorridor(layout, worldX, worldZ)) {
+        height *= 0.04;
       }
 
       // Displace along the plane normal (local Z). After the mesh is
       // rotated flat, that becomes world-up so hills actually have height.
       pos.setZ(i, height);
 
-      let h = 0.28;
-      let s = 0.38;
-      let l = 0.32;
+      let h = theme === "ridge" ? 0.08 : theme === "city" ? 0.1 : 0.28;
+      let s = theme === "ridge" ? 0.18 : theme === "city" ? 0.08 : 0.38;
+      let l = theme === "city" ? 0.38 : 0.32;
       for (const p of patches) {
         const d = Math.hypot(worldX - p.x, worldZ - p.z);
         if (d < p.r) {
@@ -138,15 +164,15 @@ export function Terrain() {
       } else {
         l += 0.04;
       }
-      if (isRunwayCorridor(worldX, worldZ)) {
+      if (isRunwayCorridor(layout, worldX, worldZ)) {
         h = 0.08;
         s = 0.12;
         l = 0.28;
       }
-      if (lakeD < 46) {
-        h = 0.12;
-        s = 0.22;
-        l = 0.38;
+      if (wet > 0.2) {
+        h = 0.55;
+        s = 0.18;
+        l = 0.42;
       }
       color.setHSL(h, s, l);
       colors[i * 3] = color.r;
@@ -157,7 +183,7 @@ export function Terrain() {
     geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
     geo.computeVertexNormals();
     return { geometry: geo, texture: makeGrassTexture() };
-  }, []);
+  }, [layout]);
 
   return (
     <mesh
@@ -177,16 +203,16 @@ export function Terrain() {
 }
 
 /** Instanced pines and a few rounded deciduous trees. */
-export function TreeField() {
+export function TreeField({ layout }: { layout: SceneLayout }) {
+  const count = layout.theme === "city" || layout.theme === "storm" ? 50 : 200;
   const pines = useMemo(() => {
-    const rand = seededRandom(77);
+    const rand = seededRandom(77 + layout.planId * 13);
     const arr: { x: number; z: number; scale: number; rot: number }[] = [];
-    for (let i = 0; i < 220; i++) {
+    for (let i = 0; i < count; i++) {
       const x = (rand() - 0.5) * 1400;
-      const z = rand() * -2100 + 120;
-      if (isRunwayCorridor(x, z)) continue;
-      if (isLake(x, z)) continue;
-      if (Math.abs(x) < 28 && z > -20 && z < 90) continue;
+      const z = (rand() - 0.35) * 2200;
+      if (isRunwayCorridor(layout, x, z)) continue;
+      if (waterScore(layout.theme, x, z) > 0.35) continue;
       arr.push({
         x,
         z,
@@ -195,20 +221,21 @@ export function TreeField() {
       });
     }
     return arr;
-  }, []);
+  }, [layout, count]);
 
   const deciduous = useMemo(() => {
-    const rand = seededRandom(131);
+    const rand = seededRandom(131 + layout.planId * 9);
     const arr: { x: number; z: number; scale: number }[] = [];
-    for (let i = 0; i < 55; i++) {
+    const n = layout.theme === "city" ? 8 : 50;
+    for (let i = 0; i < n; i++) {
       const x = (rand() - 0.5) * 1100;
-      const z = rand() * -1800 + 60;
-      if (isRunwayCorridor(x, z)) continue;
-      if (isLake(x, z)) continue;
+      const z = (rand() - 0.35) * 1800;
+      if (isRunwayCorridor(layout, x, z)) continue;
+      if (waterScore(layout.theme, x, z) > 0.35) continue;
       arr.push({ x, z, scale: 0.8 + rand() * 1.1 });
     }
     return arr;
-  }, []);
+  }, [layout]);
 
   const pineFoliage = useMemo(() => {
     const geo = new THREE.ConeGeometry(1.05, 2.6, 8);
@@ -319,7 +346,7 @@ function PlacedInstances({
  * Distant ridgeline — a displaced strip so the horizon reads as mountains
  * instead of four-sided cones.
  */
-export function DistantMountains() {
+export function DistantMountains({ theme }: { theme: MapTheme }) {
   const geometry = useMemo(() => {
     const geo = new THREE.PlaneGeometry(1100, 280, 70, 18);
     const pos = geo.attributes.position;
@@ -355,7 +382,17 @@ export function DistantMountains() {
   }, []);
 
   return (
-    <mesh geometry={geometry} position={[40, -4, -2280]} rotation={[0, 0, 0]}>
+    <mesh
+      geometry={geometry}
+      position={
+        theme === "ridge"
+          ? [180, -4, -2100]
+          : theme === "city"
+            ? [-120, -4, 900]
+            : [40, -4, -2280]
+      }
+      rotation={[0, theme === "city" ? Math.PI : 0, 0]}
+    >
       <meshStandardMaterial
         vertexColors
         roughness={0.95}
@@ -367,31 +404,62 @@ export function DistantMountains() {
 }
 
 /** Reflective lake beside the departure airfield. */
-export function WaterBody() {
+export function WaterBody({ theme }: { theme: MapTheme }) {
+  const patches =
+    theme === "coast"
+      ? [{ x: -220, z: -400, r: 280 }]
+      : theme === "harbor"
+        ? [{ x: 480, z: -40, r: 200 }]
+        : theme === "storm"
+          ? [
+              { x: 480, z: 80, r: 320 },
+              { x: 200, z: 260, r: 90 },
+            ]
+          : theme === "valley"
+            ? [{ x: -20, z: -500, r: 22 }]
+            : theme === "city"
+              ? [{ x: -40, z: 200, r: 55 }]
+              : [{ x: -80, z: 10, r: 40 }];
+
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-68, 0.04, 8]}>
-      <circleGeometry args={[36, 48]} />
-      <MeshReflectorMaterial
-        blur={[200, 80]}
-        resolution={256}
-        mixBlur={0.85}
-        mixStrength={0.55}
-        roughness={0.35}
-        metalness={0.45}
-        color="#1a4e66"
-        mirror={0.25}
-        depthScale={0.4}
-        minDepthThreshold={0.3}
-        maxDepthThreshold={1.2}
-      />
-    </mesh>
+    <group>
+      {patches.map((p) => (
+        <mesh
+          key={`${p.x}-${p.z}`}
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[p.x, 0.04, p.z]}
+        >
+          <circleGeometry args={[p.r, 40]} />
+          <MeshReflectorMaterial
+            blur={[200, 80]}
+            resolution={192}
+            mixBlur={0.85}
+            mixStrength={0.55}
+            roughness={0.35}
+            metalness={0.45}
+            color={theme === "storm" ? "#1a3348" : "#1a4e66"}
+            mirror={0.25}
+            depthScale={0.4}
+            minDepthThreshold={0.3}
+            maxDepthThreshold={1.2}
+          />
+        </mesh>
+      ))}
+    </group>
   );
 }
 
 /** Hangars with barrel roofs, a control tower, and a windsock. */
-export function AirportBuildings({ night = false }: { night?: boolean }) {
+export function AirportBuildings({
+  layout,
+  night = false,
+}: {
+  layout: SceneLayout;
+  night?: boolean;
+}) {
+  const apron = apronBeside(layout.departureStart, layout.departureEnd, 48);
   return (
-    <group position={[48, 0, 78]}>
+    <group position={[apron.x, 0, apron.z]} rotation={[0, apron.heading, 0]}>
       <ControlTower />
       <Hangar position={[-16, 0, 6]} width={16} depth={10} height={5.2} />
       <Hangar position={[12, 0, 10]} width={11} depth={8} height={4.2} />
@@ -406,9 +474,16 @@ export function AirportBuildings({ night = false }: { night?: boolean }) {
 }
 
 /** Compact destination field next to the landing runway. */
-export function DestinationAirport({ night = false }: { night?: boolean }) {
+export function DestinationAirport({
+  layout,
+  night = false,
+}: {
+  layout: SceneLayout;
+  night?: boolean;
+}) {
+  const apron = apronBeside(layout.landingThreshold, layout.landingEnd, 42);
   return (
-    <group position={[138, 0, -1660]}>
+    <group position={[apron.x, 0, apron.z]} rotation={[0, apron.heading, 0]}>
       <Hangar position={[0, 0, 8]} width={12} depth={8} height={4} />
       <mesh position={[8, 3.2, -4]} castShadow>
         <boxGeometry args={[2.4, 6.4, 2.4]} />
@@ -574,6 +649,110 @@ function Hangar({
       </mesh>
     </group>
   );
+}
+
+/** Theme-specific props: lighthouse, tower, buoy, downtown blocks. */
+export function MapLandmarks({
+  layout,
+  night,
+}: {
+  layout: SceneLayout;
+  night: boolean;
+}) {
+  const wp = layout.checkpoints[1]?.position;
+  if (!wp) return null;
+
+  if (layout.theme === "coast") {
+    return (
+      <group position={[wp.x, 0, wp.z]}>
+        <mesh position={[0, 8, 0]}>
+          <cylinderGeometry args={[1.4, 1.8, 16, 10]} />
+          <meshStandardMaterial color="#f2eee6" roughness={0.7} />
+        </mesh>
+        <mesh position={[0, 16.4, 0]}>
+          <cylinderGeometry args={[1.8, 1.8, 1.2, 10]} />
+          <meshStandardMaterial color="#c43c2c" />
+        </mesh>
+        <mesh position={[0, 17.4, 0]}>
+          <sphereGeometry args={[0.7, 10, 10]} />
+          <meshBasicMaterial color={night ? "#fff4b0" : "#ffe08a"} />
+        </mesh>
+        {night && (
+          <pointLight
+            position={[0, 17.4, 0]}
+            color="#fff1b8"
+            intensity={3}
+            distance={80}
+          />
+        )}
+      </group>
+    );
+  }
+
+  if (layout.theme === "city") {
+    const rand = seededRandom(404);
+    const towers: { x: number; z: number; h: number; w: number }[] = [];
+    for (let i = 0; i < 22; i++) {
+      towers.push({
+        x: wp.x + (rand() - 0.5) * 220,
+        z: wp.z + (rand() - 0.5) * 180,
+        h: 18 + rand() * 42,
+        w: 6 + rand() * 8,
+      });
+    }
+    return (
+      <group>
+        <mesh position={[wp.x, 28, wp.z]}>
+          <boxGeometry args={[10, 56, 10]} />
+          <meshStandardMaterial
+            color="#3a4558"
+            metalness={0.25}
+            roughness={0.5}
+          />
+        </mesh>
+        <mesh position={[wp.x, 57, wp.z]}>
+          <boxGeometry args={[4, 6, 4]} />
+          <meshBasicMaterial color={night ? "#ffd36a" : "#d8c070"} />
+        </mesh>
+        {towers.map((t) => (
+          <mesh key={`${t.x}-${t.z}`} position={[t.x, t.h / 2, t.z]} castShadow>
+            <boxGeometry args={[t.w, t.h, t.w]} />
+            <meshStandardMaterial
+              color="#4a5568"
+              emissive={night ? "#3a4a20" : "#000"}
+              emissiveIntensity={night ? 0.25 : 0}
+              roughness={0.6}
+            />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+
+  if (layout.theme === "harbor" || layout.theme === "storm") {
+    return (
+      <group position={[wp.x, 0, wp.z]}>
+        <mesh position={[0, 4.5, 0]}>
+          <cylinderGeometry args={[0.5, 0.7, 9, 8]} />
+          <meshStandardMaterial color="#c8c4bc" metalness={0.3} />
+        </mesh>
+        <mesh position={[0, 9.4, 0]}>
+          <sphereGeometry args={[0.9, 10, 10]} />
+          <meshBasicMaterial color={night ? "#ff7a3a" : "#e24a3a"} />
+        </mesh>
+        {night && (
+          <pointLight
+            position={[0, 9.4, 0]}
+            color="#ff8a40"
+            intensity={2.4}
+            distance={60}
+          />
+        )}
+      </group>
+    );
+  }
+
+  return null;
 }
 
 function Windsock({ position }: { position: [number, number, number] }) {

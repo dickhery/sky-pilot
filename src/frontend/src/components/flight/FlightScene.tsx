@@ -4,6 +4,7 @@ import {
   AirportBuildings,
   DestinationAirport,
   DistantMountains,
+  MapLandmarks,
   Terrain,
   TreeField,
   WaterBody,
@@ -12,7 +13,6 @@ import {
   type Checkpoint,
   type FlightState,
   type SceneLayout,
-  buildSceneLayout,
   stepFlight,
 } from "@/components/flight/flightPhysics";
 import type { FlightPhase, Plane as PlaneType, Weather } from "@/types/game";
@@ -23,6 +23,7 @@ import * as THREE from "three";
 export interface FlightSceneProps {
   plane: PlaneType;
   weather: Weather;
+  layout: SceneLayout;
   /** Live control axes ref from useFlightControls. */
   controlsAxes: React.MutableRefObject<{
     pitch: number;
@@ -44,12 +45,11 @@ export interface FlightSceneProps {
 export function FlightScene({
   plane,
   weather,
+  layout,
   controlsAxes,
   flightState,
   onPhaseChange,
 }: FlightSceneProps) {
-  const layout = useMemo(buildSceneLayout, []);
-
   return (
     <Canvas
       shadows
@@ -63,12 +63,13 @@ export function FlightScene({
       camera={{ fov: 58, near: 0.15, far: 2800, position: [0, 6, 50] }}
     >
       <Environment weather={weather} />
-      <Terrain />
-      <WaterBody />
-      <TreeField />
-      <DistantMountains />
-      <AirportBuildings night={weather === "Nighttime"} />
-      <DestinationAirport night={weather === "Nighttime"} />
+      <Terrain layout={layout} />
+      <WaterBody theme={layout.theme} />
+      <TreeField layout={layout} />
+      <DistantMountains theme={layout.theme} />
+      <MapLandmarks layout={layout} night={weather === "Nighttime"} />
+      <AirportBuildings layout={layout} night={weather === "Nighttime"} />
+      <DestinationAirport layout={layout} night={weather === "Nighttime"} />
       <Runway
         start={layout.departureStart}
         end={layout.departureEnd}

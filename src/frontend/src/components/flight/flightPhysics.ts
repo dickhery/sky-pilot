@@ -1,5 +1,13 @@
+import type { Checkpoint, SceneLayout } from "@/components/flight/mapLayouts";
 import type { FlightPhase, Plane } from "@/types/game";
 import * as THREE from "three";
+
+export type {
+  Checkpoint,
+  MapTheme,
+  SceneLayout,
+} from "@/components/flight/mapLayouts";
+export { buildSceneLayout } from "@/components/flight/mapLayouts";
 
 /** Runway surface elevation in world meters. */
 export const RUNWAY_ELEVATION = 0.02;
@@ -13,8 +21,6 @@ export const RUNWAY_HALF_WIDTH = 6.5;
 export const ROTATE_SPEED_KTS = 55;
 /** Target approach speed shown in the HUD (kt). */
 export const APPROACH_SPEED_KTS = 70;
-/** World X of the destination runway. */
-export const LANDING_RUNWAY_X = 110;
 /** Hardest survivable touchdown (m/s). ~1,000 fpm. */
 export const MAX_SAFE_DESCENT_MPS = 5.2;
 /** Fastest survivable touchdown (m/s). ~80 kt. */
@@ -32,13 +38,6 @@ export type CrashReason =
   | "too_fast"
   | "missed_course"
   | "crooked";
-
-export interface Checkpoint {
-  id: string;
-  name: string;
-  position: THREE.Vector3;
-  radius: number;
-}
 
 /**
  * Shared flight-simulation state.
@@ -71,70 +70,8 @@ export interface FlightState {
   checkpointFlash: number;
 }
 
-export interface SceneLayout {
-  departureStart: THREE.Vector3;
-  departureHeading: number;
-  departureEnd: THREE.Vector3;
-  waypoint: THREE.Vector3;
-  checkpoints: Checkpoint[];
-  landingThreshold: THREE.Vector3;
-  landingHeading: number;
-  landingEnd: THREE.Vector3;
-}
-
 export function createInitialRotation(heading = 0): THREE.Euler {
   return new THREE.Euler(0, heading, 0, "YXZ");
-}
-
-export function buildSceneLayout(): SceneLayout {
-  const departureStart = new THREE.Vector3(0, GROUND_CONTACT_Y, 150);
-  const departureEnd = new THREE.Vector3(0, RUNWAY_ELEVATION, -150);
-  const departureHeading = 0;
-
-  const checkpoints: Checkpoint[] = [
-    {
-      id: "climbout",
-      name: "Climb-out Gate",
-      position: new THREE.Vector3(0, 72, -480),
-      radius: 18,
-    },
-    {
-      id: "waypoint",
-      name: "Course Gate",
-      position: new THREE.Vector3(-300, 88, -880),
-      radius: 18,
-    },
-    {
-      id: "final",
-      name: "Final Approach Gate",
-      position: new THREE.Vector3(LANDING_RUNWAY_X, 40, -1540),
-      radius: 18,
-    },
-  ];
-
-  const waypoint = checkpoints[1].position;
-  const landingThreshold = new THREE.Vector3(
-    LANDING_RUNWAY_X,
-    RUNWAY_ELEVATION,
-    -1740,
-  );
-  const landingEnd = new THREE.Vector3(
-    LANDING_RUNWAY_X,
-    RUNWAY_ELEVATION,
-    -2000,
-  );
-  const landingHeading = 0;
-
-  return {
-    departureStart,
-    departureEnd,
-    departureHeading,
-    waypoint,
-    checkpoints,
-    landingThreshold,
-    landingEnd,
-    landingHeading,
-  };
 }
 
 export function createInitialFlightState(layout: SceneLayout): FlightState {
@@ -216,18 +153,55 @@ function crash(state: FlightState, reason: CrashReason, groundY: number): void {
   state.landingHint = null;
 }
 
+/** Distance from a point to a runway centerline (XZ). */
+export function centerlineOffset(
+  position: THREE.Vector3,
+  start: THREE.Vector3,
+  end: THREE.Vector3,
+): number {
+  const ax = end.x - start.x;
+  const az = end.z - start.z;
+  const len = Math.hypot(ax, az) || 1;
+  const dx = position.x - start.x;
+  const dz = position.z - start.z;
+  return Math.abs(dx * (-az / len) + dz * (ax / len));
+}
+
+/** True when `position` is over a strip from `start` to `end`. */
+export function isOnStrip(
+  position: THREE.Vector3,
+  start: THREE.Vector3,
+  end: THREE.Vector3,
+  halfWidth = RUNWAY_HALF_WIDTH,
+  padStart = 12,
+  padEnd = 12,
+): boolean {
+  const ax = end.x - start.x;
+  const az = end.z - start.z;
+  const len = Math.hypot(ax, az) || 1;
+  const fx = ax / len;
+  const fz = az / len;
+  const dx = position.x - start.x;
+  const dz = position.z - start.z;
+  const along = dx * fx + dz * fz;
+  const across = dx * -fz + dz * fx;
+  return (
+    along >= -padStart && along <= len + padEnd && Math.abs(across) <= halfWidth
+  );
+}
+
 /** True when position is over the landing runway corridor. */
 export function isOnLandingRunway(
   position: THREE.Vector3,
   layout: SceneLayout,
 ): boolean {
-  const centerX = layout.landingThreshold.x;
-  const zMin = Math.min(layout.landingThreshold.z, layout.landingEnd.z) - 20;
-  const zMax = Math.max(layout.landingThreshold.z, layout.landingEnd.z) + 10;
-  return (
-    Math.abs(position.x - centerX) <= RUNWAY_HALF_WIDTH &&
-    position.z <= zMax &&
-    position.z >= zMin
+  return isOnStrip(
+    position,
+    layout.landingThreshold,
+    layout.landingEnd,
+    RUNWAY_HALF_WIDTH,
+    20,
+    12,
   );
 }
 
@@ -236,13 +210,13 @@ export function isOnDepartureRunway(
   position: THREE.Vector3,
   layout: SceneLayout,
 ): boolean {
-  const centerX = layout.departureStart.x;
-  const zMin = Math.min(layout.departureStart.z, layout.departureEnd.z) - 10;
-  const zMax = Math.max(layout.departureStart.z, layout.departureEnd.z) + 10;
-  return (
-    Math.abs(position.x - centerX) <= RUNWAY_HALF_WIDTH &&
-    position.z <= zMax &&
-    position.z >= zMin
+  return isOnStrip(
+    position,
+    layout.departureStart,
+    layout.departureEnd,
+    RUNWAY_HALF_WIDTH,
+    12,
+    12,
   );
 }
 
@@ -502,9 +476,11 @@ function resolveGroundContact(
   const onLanding = isOnLandingRunway(state.position, layout);
   const onDeparture = isOnDepartureRunway(state.position, layout);
   const courseComplete = state.nextCheckpoint >= layout.checkpoints.length;
-  const alignmentDeg = Math.abs(
-    THREE.MathUtils.radToDeg(state.rotation.y - layout.landingHeading),
+  const headingErr = Math.atan2(
+    Math.sin(state.rotation.y - layout.landingHeading),
+    Math.cos(state.rotation.y - layout.landingHeading),
   );
+  const alignmentDeg = Math.abs(THREE.MathUtils.radToDeg(headingErr));
 
   if (!onLanding && !onDeparture) {
     crash(state, "off_runway", groundY);
@@ -514,7 +490,8 @@ function resolveGroundContact(
     // A bounced rotate on the departure strip is not a crash. Coming
     // back after leaving the field, or after any gate, is.
     const leftTheField =
-      state.nextCheckpoint > 0 || state.position.z < layout.departureEnd.z - 40;
+      state.nextCheckpoint > 0 ||
+      state.position.distanceTo(layout.departureStart) > 280;
     if (!leftTheField && state.phase !== "landing") {
       return;
     }
@@ -544,7 +521,11 @@ function resolveGroundContact(
     descentRate: descentAtContact,
     alignmentDeg,
     speed: state.speed,
-    centerlineOffset: Math.abs(state.position.x - layout.landingThreshold.x),
+    centerlineOffset: centerlineOffset(
+      state.position,
+      layout.landingThreshold,
+      layout.landingEnd,
+    ),
   };
   state.phase = "rollout";
   state.landingHint = "brake_to_finish";
