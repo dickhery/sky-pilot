@@ -1,3 +1,4 @@
+import { CockpitInterior } from "@/components/flight/CockpitInterior";
 import type { FlightState } from "@/components/flight/flightPhysics";
 import type { PlaneId } from "@/types/game";
 import { useFrame } from "@react-three/fiber";
@@ -5,6 +6,8 @@ import { forwardRef, useMemo, useRef } from "react";
 import * as THREE from "three";
 
 interface ControlAxesLike {
+  pitch: number;
+  roll: number;
   throttle: number;
 }
 
@@ -14,6 +17,8 @@ interface PlaneModelProps {
   axes: React.MutableRefObject<ControlAxesLike>;
   /** Live flight state — gear and lights follow airborne / speed. */
   flightState: React.MutableRefObject<FlightState>;
+  /** Hide the exterior canopy fill when the camera is in the seat. */
+  cockpitView?: boolean;
 }
 
 interface Palette {
@@ -136,7 +141,10 @@ function makeFin(
  * Extra300: low-wing aerobat, clipped wings, dark/gold livery.
  */
 export const PlaneModel = forwardRef<THREE.Group, PlaneModelProps>(
-  function PlaneModel({ planeId, axes, flightState }, ref) {
+  function PlaneModel(
+    { planeId, axes, flightState, cockpitView = false },
+    ref,
+  ) {
     const isCessna = planeId === "CessnaSkyhawk";
     const propRef = useRef<THREE.Group>(null);
     const discRef = useRef<THREE.Mesh>(null);
@@ -302,30 +310,37 @@ export const PlaneModel = forwardRef<THREE.Group, PlaneModelProps>(
             </mesh>
           </group>
 
-          {/* Cockpit interior (dark, so the glass reads as a canopy) */}
-          <mesh position={[0, 0.22, -0.15]}>
-            <capsuleGeometry args={[0.22, 0.7, 4, 10]} />
-            <meshStandardMaterial color={colors.interior} roughness={0.9} />
-          </mesh>
-
-          {/* Canopy */}
-          <mesh
-            position={[0, isCessna ? 0.48 : 0.42, isCessna ? -0.15 : -0.05]}
-            rotation={[0.06, 0, 0]}
-            scale={[1, 0.72, isCessna ? 1.15 : 1.05]}
-          >
-            <sphereGeometry
-              args={[0.5, 22, 16, 0, Math.PI * 2, 0, Math.PI * 0.58]}
+          {cockpitView ? (
+            <CockpitInterior
+              planeId={planeId}
+              flightState={flightState}
+              axes={axes}
             />
-            <meshStandardMaterial
-              color={colors.glass}
-              metalness={0.85}
-              roughness={0.06}
-              transparent
-              opacity={0.48}
-              envMapIntensity={1.2}
-            />
-          </mesh>
+          ) : (
+            <>
+              <mesh position={[0, 0.22, -0.15]}>
+                <capsuleGeometry args={[0.22, 0.7, 4, 10]} />
+                <meshStandardMaterial color={colors.interior} roughness={0.9} />
+              </mesh>
+              <mesh
+                position={[0, isCessna ? 0.48 : 0.42, isCessna ? -0.15 : -0.05]}
+                rotation={[0.06, 0, 0]}
+                scale={[1, 0.72, isCessna ? 1.15 : 1.05]}
+              >
+                <sphereGeometry
+                  args={[0.5, 22, 16, 0, Math.PI * 2, 0, Math.PI * 0.58]}
+                />
+                <meshStandardMaterial
+                  color={colors.glass}
+                  metalness={0.85}
+                  roughness={0.06}
+                  transparent
+                  opacity={0.48}
+                  envMapIntensity={1.2}
+                />
+              </mesh>
+            </>
+          )}
           {/* Windshield frame */}
           <mesh position={[0, 0.46, -0.58]} rotation={[0.55, 0, 0]}>
             <torusGeometry args={[0.32, 0.018, 6, 18, Math.PI]} />

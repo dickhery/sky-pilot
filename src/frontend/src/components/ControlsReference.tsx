@@ -81,8 +81,8 @@ const BINDINGS: ControlBinding[] = [
     group: "Brakes",
   },
   {
-    input: "Mouse",
-    action: "Free-look camera — drag to scan the cockpit",
+    input: "C",
+    action: "Toggle cockpit / chase camera",
     icon: MousePointer2,
     group: "View",
   },

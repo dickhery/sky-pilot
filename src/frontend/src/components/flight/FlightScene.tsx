@@ -35,6 +35,8 @@ export interface FlightSceneProps {
   flightState: React.MutableRefObject<FlightState>;
   /** Called when the flight phase changes so the page can update the store. */
   onPhaseChange: (phase: FlightPhase) => void;
+  /** Pilot-seat camera when true. */
+  cockpitView: boolean;
 }
 
 /**
@@ -49,6 +51,7 @@ export function FlightScene({
   controlsAxes,
   flightState,
   onPhaseChange,
+  cockpitView,
 }: FlightSceneProps) {
   return (
     <Canvas
@@ -60,7 +63,12 @@ export function FlightScene({
         toneMapping: THREE.ACESFilmicToneMapping,
         toneMappingExposure: 1.05,
       }}
-      camera={{ fov: 58, near: 0.15, far: 2800, position: [0, 6, 50] }}
+      camera={{
+        fov: cockpitView ? 72 : 58,
+        near: cockpitView ? 0.04 : 0.15,
+        far: 2800,
+        position: [0, 6, 50],
+      }}
     >
       <Environment weather={weather} />
       <Terrain layout={layout} />
@@ -95,6 +103,7 @@ export function FlightScene({
         controlsAxes={controlsAxes}
         flightState={flightState}
         onPhaseChange={onPhaseChange}
+        cockpitView={cockpitView}
       />
     </Canvas>
   );
@@ -382,16 +391,19 @@ function FlightRig({
   controlsAxes,
   flightState,
   onPhaseChange,
+  cockpitView,
 }: {
   plane: PlaneType;
   layout: SceneLayout;
   controlsAxes: FlightSceneProps["controlsAxes"];
   flightState: React.MutableRefObject<FlightState>;
   onPhaseChange: (phase: FlightPhase) => void;
+  cockpitView: boolean;
 }) {
   const planeRef = useRef<THREE.Group>(null);
   const shadowRef = useRef<THREE.Mesh>(null);
   const { camera } = useThree();
+  const persp = camera as THREE.PerspectiveCamera;
   const lastPhase = useRef<FlightPhase>("takeoff");
   const camPos = useRef(new THREE.Vector3(0, 6, 50));
 
@@ -422,33 +434,49 @@ function FlightRig({
       mat.opacity = opacity;
     }
 
-    // Chase camera in the aircraft's heading frame, with a fraction of bank.
-    const dist = state.airborne ? 12.5 : 9;
-    const height = state.airborne ? 3.6 : 2.6;
     const heading = state.rotation.y;
     const bankLean = state.rotation.z * 0.35;
-    _camOffset.set(
-      Math.sin(heading) * dist + Math.cos(heading) * bankLean * 2.2,
-      height + Math.abs(state.rotation.x) * 1.4,
-      Math.cos(heading) * dist - Math.sin(heading) * bankLean * 2.2,
-    );
-    const targetX = state.position.x + _camOffset.x;
-    const targetY = state.position.y + _camOffset.y;
-    const targetZ = state.position.z + _camOffset.z;
-    camPos.current.lerp(
-      _camTarget.set(targetX, targetY, targetZ),
-      Math.min(1, dt * 3.1),
-    );
-    camera.position.copy(camPos.current);
 
-    _lookAt.set(
-      state.position.x - Math.sin(heading) * 10,
-      state.position.y + 0.55 + state.rotation.x * 2.5,
-      state.position.z - Math.cos(heading) * 10,
-    );
-    camera.lookAt(_lookAt);
-    _up.set(-Math.sin(heading) * bankLean * 0.25, 1, 0).normalize();
-    camera.up.lerp(_up, Math.min(1, dt * 4));
+    if (cockpitView) {
+      persp.fov = 72;
+      persp.near = 0.04;
+      persp.updateProjectionMatrix();
+      _camOffset.set(0.12, 0.38, 0.18);
+      _camOffset.applyEuler(state.rotation);
+      camera.position.copy(state.position).add(_camOffset);
+      camera.quaternion.setFromEuler(state.rotation);
+      camera.rotateX(-0.06);
+      _up.set(0, 1, 0);
+      camera.up.copy(_up);
+    } else {
+      persp.fov = 58;
+      persp.near = 0.15;
+      persp.updateProjectionMatrix();
+      const dist = state.airborne ? 12.5 : 9;
+      const height = state.airborne ? 3.6 : 2.6;
+      _camOffset.set(
+        Math.sin(heading) * dist + Math.cos(heading) * bankLean * 2.2,
+        height + Math.abs(state.rotation.x) * 1.4,
+        Math.cos(heading) * dist - Math.sin(heading) * bankLean * 2.2,
+      );
+      camPos.current.lerp(
+        _camTarget.set(
+          state.position.x + _camOffset.x,
+          state.position.y + _camOffset.y,
+          state.position.z + _camOffset.z,
+        ),
+        Math.min(1, dt * 3.1),
+      );
+      camera.position.copy(camPos.current);
+      _lookAt.set(
+        state.position.x - Math.sin(heading) * 10,
+        state.position.y + 0.55 + state.rotation.x * 2.5,
+        state.position.z - Math.cos(heading) * 10,
+      );
+      camera.lookAt(_lookAt);
+      _up.set(-Math.sin(heading) * bankLean * 0.25, 1, 0).normalize();
+      camera.up.lerp(_up, Math.min(1, dt * 4));
+    }
   });
 
   return (
@@ -458,6 +486,7 @@ function FlightRig({
           planeId={plane.id}
           axes={controlsAxes}
           flightState={flightState}
+          cockpitView={cockpitView}
         />
       </group>
       <mesh ref={shadowRef} rotation={[-Math.PI / 2, 0, 0]}>

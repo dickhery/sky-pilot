@@ -17,6 +17,8 @@ export interface FlightControls {
   axes: React.MutableRefObject<ControlAxes>;
   throttlePct: number;
   brakesOn: boolean;
+  cockpitView: boolean;
+  toggleCockpit: () => void;
 }
 
 const KEY_MAP: Record<
@@ -49,6 +51,7 @@ export function useFlightControls(): FlightControls {
   const target = useRef({ pitch: 0, roll: 0 });
   const [throttlePct, setThrottlePct] = useState(25);
   const [brakesOn, setBrakesOn] = useState(false);
+  const [cockpitView, setCockpitView] = useState(false);
 
   useEffect(() => {
     const readTargets = () => {
@@ -92,6 +95,11 @@ export function useFlightControls(): FlightControls {
     frame = requestAnimationFrame(tick);
 
     const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "KeyC" && !e.repeat) {
+        e.preventDefault();
+        setCockpitView((v) => !v);
+        return;
+      }
       const action = KEY_MAP[e.code];
       if (!action) return;
       if (
@@ -124,5 +132,11 @@ export function useFlightControls(): FlightControls {
     };
   }, []);
 
-  return { axes, throttlePct, brakesOn };
+  return {
+    axes,
+    throttlePct,
+    brakesOn,
+    cockpitView,
+    toggleCockpit: () => setCockpitView((v) => !v),
+  };
 }

@@ -36,6 +36,8 @@ interface HUDProps {
   } | null;
   throttlePct: number;
   brakesOn: boolean;
+  cockpitView: boolean;
+  onToggleCockpit: () => void;
 }
 
 const MISSION_STEPS = [
@@ -64,6 +66,8 @@ export function HUD({
   nextWaypoint,
   throttlePct,
   brakesOn,
+  cockpitView,
+  onToggleCockpit,
 }: HUDProps) {
   const phaseLabel: Record<FlightPhase, string> = {
     idle: "Standby",
@@ -320,7 +324,17 @@ export function HUD({
           <span>Less power</span>
           <Key>Space</Key>
           <span>Brakes</span>
+          <Key>C</Key>
+          <span>Cockpit / chase</span>
         </div>
+        <button
+          type="button"
+          className="pointer-events-auto mt-2 w-full rounded-sm border border-primary/40 bg-primary/10 px-2 py-1 text-[10px] text-primary"
+          onClick={onToggleCockpit}
+          data-ocid="flight.hud.view_toggle"
+        >
+          {cockpitView ? "Chase camera" : "Cockpit view"}
+        </button>
       </div>
     </div>
   );

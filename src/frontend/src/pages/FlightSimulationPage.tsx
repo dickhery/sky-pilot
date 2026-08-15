@@ -14,6 +14,7 @@ import {
   missionStep,
 } from "@/components/flight/flightPhysics";
 import { Button } from "@/components/ui/button";
+import { useFlightAudio } from "@/hooks/useFlightAudio";
 import { useFlightControls } from "@/hooks/useFlightControls";
 import { useRecordFlightLog } from "@/hooks/useFlightData";
 import { useGameStore } from "@/store/gameStore";
@@ -58,7 +59,8 @@ export function FlightSimulationPage() {
   const setPhase = useGameStore((s) => s.setPhase);
   const setScore = useGameStore((s) => s.setScore);
 
-  const { axes, throttlePct, brakesOn } = useFlightControls();
+  const { axes, throttlePct, brakesOn, cockpitView, toggleCockpit } =
+    useFlightControls();
 
   const planId = selectedPlan ? Number(selectedPlan.id) : 1;
   const layout = useMemo(() => buildSceneLayout(planId), [planId]);
@@ -75,6 +77,11 @@ export function FlightSimulationPage() {
     landingHint: null as LandingHint,
     step: 1,
   });
+  useFlightAudio(
+    flightState,
+    axes,
+    phase === "complete" || phase === "crashed",
+  );
   const [waypointInfo, setWaypointInfo] = useState<{
     name: string;
     distance: number;
@@ -250,6 +257,7 @@ export function FlightSimulationPage() {
         controlsAxes={axes}
         flightState={flightState}
         onPhaseChange={handlePhaseChange}
+        cockpitView={cockpitView}
       />
       <HUD
         altitude={telemetry.altitude}
@@ -265,6 +273,8 @@ export function FlightSimulationPage() {
         nextWaypoint={waypointInfo}
         throttlePct={throttlePct}
         brakesOn={brakesOn}
+        cockpitView={cockpitView}
+        onToggleCockpit={toggleCockpit}
       />
       {showResults && (
         <ResultsScreen

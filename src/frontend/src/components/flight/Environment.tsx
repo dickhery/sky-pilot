@@ -20,7 +20,7 @@ export function Environment({ weather }: EnvironmentProps) {
         ? [-40, 8, -80]
         : weather === "PartlyCloudy"
           ? [30, 90, 40]
-          : [70, 110, 45],
+          : [18, 90, 28],
     [weather],
   );
 
@@ -28,17 +28,16 @@ export function Environment({ weather }: EnvironmentProps) {
     <>
       {weather === "Daytime" && (
         <>
+          <color attach="background" args={["#5aa8e6"]} />
           <Sky
             distance={450000}
-            sunPosition={sunPosition}
-            inclination={0.49}
-            azimuth={0.22}
-            turbidity={3.2}
-            rayleigh={0.85}
-            mieCoefficient={0.004}
-            mieDirectionalG={0.85}
+            sunPosition={[18, 90, 28]}
+            turbidity={1.6}
+            rayleigh={2.6}
+            mieCoefficient={0.002}
+            mieDirectionalG={0.8}
           />
-          <fog attach="fog" args={["#c5dceb", 220, 1600]} />
+          <fog attach="fog" args={["#7eb8e8", 320, 2200]} />
           <Clouds material={THREE.MeshLambertMaterial} limit={24}>
             <Cloud
               seed={4}
@@ -116,12 +115,12 @@ export function Environment({ weather }: EnvironmentProps) {
 
       {weather === "Daytime" && (
         <>
-          <ambientLight intensity={0.42} color="#e7f1ff" />
-          <hemisphereLight args={["#b7d8f2", "#4a5a3a", 0.55]} />
+          <ambientLight intensity={0.55} color="#d6ecff" />
+          <hemisphereLight args={["#8ec4f0", "#5a7048", 0.7]} />
           <directionalLight
-            position={sunPosition}
-            intensity={1.65}
-            color="#fff3d8"
+            position={[18, 90, 28]}
+            intensity={1.85}
+            color="#fff7e6"
             castShadow
             shadow-mapSize-width={1024}
             shadow-mapSize-height={1024}
