@@ -48,7 +48,7 @@ const MISSION_STEPS = [
 ] as const;
 
 const HINT_MESSAGES: Record<NonNullable<LandingHint>, string> = {
-  brake_to_finish: "Touchdown! Hold Space to brake below 20 kt to finish",
+  brake_to_finish: "Touchdown! Hold brake / Space below 20 kt to finish",
   gate_cleared: "Gate cleared — fly through the next ring",
 };
 
@@ -86,12 +86,12 @@ export function HUD({
   return (
     <div className="pointer-events-none absolute inset-0 z-20 select-none font-mono text-primary">
       {/* Top-center: mission progress + objective */}
-      <div className="absolute left-1/2 top-4 flex -translate-x-1/2 flex-col items-center gap-1.5">
+      <div className="absolute left-1/2 top-2 flex w-[min(100%,36rem)] -translate-x-1/2 flex-col items-center gap-1 px-2 sm:top-4 sm:gap-1.5">
         {nextWaypoint && phase !== "crashed" && phase !== "complete" && (
           <NavArrow heading={heading} bearing={nextWaypoint.bearing} />
         )}
         <div
-          className="hud-scanlines glow-instrument flex items-center gap-3 rounded-md border border-primary/40 bg-card/80 px-4 py-1.5 backdrop-blur"
+          className="hud-scanlines glow-instrument flex max-w-full flex-wrap items-center justify-center gap-1.5 rounded-md border border-primary/40 bg-card/80 px-2 py-1 backdrop-blur sm:gap-3 sm:px-4 sm:py-1.5"
           data-ocid="flight.hud.mission"
         >
           {MISSION_STEPS.map((step, i) => {
@@ -114,7 +114,7 @@ export function HUD({
                   />
                 )}
                 <span
-                  className={`hud-label text-[9px] ${active ? "font-bold text-accent" : done ? "text-primary" : "text-muted-foreground"}`}
+                  className={`hud-label hidden text-[9px] sm:inline ${active ? "font-bold text-accent" : done ? "text-primary" : "text-muted-foreground"}`}
                 >
                   {step.label}
                 </span>
@@ -127,7 +127,7 @@ export function HUD({
         </div>
 
         <div
-          className="hud-scanlines flex flex-col items-center gap-0.5 rounded-md border border-accent/40 bg-card/70 px-4 py-1.5 backdrop-blur"
+          className="hud-scanlines flex max-w-full flex-col items-center gap-0.5 rounded-md border border-accent/40 bg-card/70 px-2 py-1 text-center backdrop-blur sm:px-4 sm:py-1.5"
           data-ocid="flight.hud.objective"
         >
           <div className="flex items-center gap-2">
@@ -163,7 +163,7 @@ export function HUD({
       </div>
 
       {/* Top-left: instruments */}
-      <div className="absolute left-4 top-4 flex flex-col gap-2">
+      <div className="absolute left-2 top-[7.5rem] flex flex-col gap-1.5 sm:left-4 sm:top-4 sm:gap-2">
         <Instrument
           icon={<Mountain className="h-4 w-4" aria-hidden="true" />}
           label="ALT"
@@ -203,7 +203,7 @@ export function HUD({
                 aria-hidden="true"
               />
               <span className="hud-label text-[10px] text-accent">
-                Rotate — pull up (W)
+                Rotate — pull up
               </span>
             </div>
           )}
@@ -216,16 +216,16 @@ export function HUD({
                 aria-hidden="true"
               />
               <span className="hud-label text-[10px] text-accent">
-                Slow to {APPROACH_SPEED_KTS} kt (Ctrl) before landing
+                Slow to {APPROACH_SPEED_KTS} kt before landing
               </span>
             </div>
           )}
       </div>
 
       {/* Top-right: throttle + brakes */}
-      <div className="absolute right-4 top-4 flex flex-col gap-2">
+      <div className="absolute right-2 top-[7.5rem] flex flex-col gap-2 sm:right-4 sm:top-4">
         <div
-          className="hud-scanlines glow-instrument w-40 rounded-md border border-primary/40 bg-card/80 p-2 backdrop-blur"
+          className="hud-scanlines glow-instrument hidden w-40 rounded-md border border-primary/40 bg-card/80 p-2 backdrop-blur md:block"
           data-ocid="flight.hud.throttle"
         >
           <div className="flex items-center justify-between">
@@ -260,7 +260,7 @@ export function HUD({
       {/* Bottom-center: navigation */}
       {nextWaypoint && (
         <div
-          className="hud-scanlines glow-instrument absolute bottom-24 left-1/2 flex -translate-x-1/2 items-center gap-4 rounded-md border border-primary/40 bg-card/80 px-4 py-2 backdrop-blur"
+          className="hud-scanlines glow-instrument absolute bottom-36 left-1/2 flex w-[min(100%-1rem,24rem)] -translate-x-1/2 items-center justify-center gap-2 rounded-md border border-primary/40 bg-card/80 px-2 py-1.5 backdrop-blur sm:bottom-24 sm:w-auto sm:gap-4 sm:px-4 sm:py-2"
           data-ocid="flight.hud.waypoint"
         >
           <div className="flex flex-col">
@@ -301,7 +301,7 @@ export function HUD({
 
       {/* Bottom-right: controls */}
       <div
-        className="hud-scanlines absolute bottom-4 right-4 rounded-md border border-border bg-card/80 p-3 backdrop-blur"
+        className="hud-scanlines absolute bottom-4 right-4 hidden rounded-md border border-border bg-card/80 p-3 backdrop-blur md:block"
         data-ocid="flight.hud.controls"
       >
         <div className="mb-1.5 flex items-center gap-1.5">
@@ -374,7 +374,7 @@ function Instrument({
 }) {
   return (
     <div
-      className="hud-scanlines glow-instrument flex w-36 items-center gap-2.5 rounded-md border border-primary/40 bg-card/80 px-2.5 py-1.5 backdrop-blur"
+      className="hud-scanlines glow-instrument flex w-[6.5rem] items-center gap-1.5 rounded-md border border-primary/40 bg-card/80 px-1.5 py-1 backdrop-blur sm:w-36 sm:gap-2.5 sm:px-2.5 sm:py-1.5"
       data-ocid={dataOcid}
     >
       <span className="text-primary">{icon}</span>

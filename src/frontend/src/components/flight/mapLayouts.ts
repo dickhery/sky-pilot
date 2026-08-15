@@ -163,17 +163,17 @@ function cityLayout(): SceneLayout {
   );
 }
 
-/** Cloudy Valley Tour — fly the valley to the right, land at the far end. */
+/** Cloudy Valley Tour — fly the valley floor to the right, land at the far end. */
 function valleyLayout(): SceneLayout {
-  const hDep = -1.15;
+  const hDep = -0.7;
   const hLand = 0.35;
   return pack(
     5,
     "valley",
-    strip(-180, 40, hDep, 130, 140),
+    strip(80, 20, hDep, 100, 140),
     strip(120, -1240, hLand, 0, 250),
     [
-      gate("climbout", "Valley Climb", 80, 88, -220),
+      gate("climbout", "Valley Climb", 140, 88, -220),
       gate("waypoint", "Cloud Gap", 360, 105, -560),
       gate("final", "Overlook Final", 180, 48, -980),
     ],
@@ -232,4 +232,44 @@ export function apronBeside(
     z: midZ - Math.sin(heading) * rightMeters,
     heading,
   };
+}
+
+/**
+ * How strongly a world XZ point should be graded flat for an airfield.
+ * Wider than the terrain vertex spacing (~42 m) so hills cannot poke
+ * through the runway between samples.
+ */
+export function stripClearance(
+  x: number,
+  z: number,
+  start: THREE.Vector3,
+  end: THREE.Vector3,
+  halfWidth = 130,
+  endPad = 90,
+): number {
+  const ax = end.x - start.x;
+  const az = end.z - start.z;
+  const len = Math.hypot(ax, az) || 1;
+  const ux = ax / len;
+  const uz = az / len;
+  const dx = x - start.x;
+  const dz = z - start.z;
+  const along = dx * ux + dz * uz;
+  const across = dx * -uz + dz * ux;
+  const alongClamped = THREE.MathUtils.clamp(along, -endPad, len + endPad);
+  const alongOff = along - alongClamped;
+  const dist = Math.hypot(across, alongOff);
+  return THREE.MathUtils.smoothstep(halfWidth, halfWidth * 0.28, dist);
+}
+
+/** 1 = fully graded airfield, 0 = untouched countryside. */
+export function airfieldClearance(
+  layout: SceneLayout,
+  x: number,
+  z: number,
+): number {
+  return Math.max(
+    stripClearance(x, z, layout.departureStart, layout.departureEnd),
+    stripClearance(x, z, layout.landingThreshold, layout.landingEnd),
+  );
 }

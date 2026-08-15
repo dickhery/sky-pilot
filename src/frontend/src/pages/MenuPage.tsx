@@ -85,7 +85,7 @@ export function MenuPage() {
         </p>
 
         {/* Title */}
-        <h1 className="mt-3 font-display text-5xl font-bold tracking-tight text-foreground sm:text-6xl">
+        <h1 className="mt-3 font-display text-4xl font-bold tracking-tight text-foreground sm:text-6xl">
           Sky&nbsp;Pilot
         </h1>
 
@@ -97,7 +97,7 @@ export function MenuPage() {
 
         {/* HUD status strip */}
         <div
-          className="mt-7 flex items-center gap-4 rounded-full border border-border bg-card/60 px-5 py-2 backdrop-blur"
+          className="mt-7 flex flex-wrap items-center justify-center gap-3 rounded-full border border-border bg-card/60 px-4 py-2 backdrop-blur sm:gap-4 sm:px-5"
           data-ocid="menu.status.panel"
         >
           <span className="flex items-center gap-2">

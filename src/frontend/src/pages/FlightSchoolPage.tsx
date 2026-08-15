@@ -32,9 +32,9 @@ const PHASES: Phase[] = [
     summary:
       "Accelerate down the runway, build airspeed, and rotate to lift off.",
     details: [
-      "Hold Shift to spool the throttle up — watch the airspeed indicator climb past rotation speed.",
-      "On the ground A / D steers the nosewheel — keep the nose on the centreline.",
-      "Pull back on W (or ↑) to rotate at about 55 kt — lift the nose smoothly.",
+      "Add power with Shift or the throttle slider — watch the airspeed climb past rotation speed.",
+      "On the ground, A / D or the left stick steers the nosewheel — keep the nose on the centreline.",
+      "Pull back on W, ↑, or drag the stick up to rotate at about 55 kt — lift the nose smoothly.",
       "Once airborne, ease the nose down slightly to build speed before climbing out.",
     ],
   },
@@ -46,8 +46,8 @@ const PHASES: Phase[] = [
     details: [
       "Each ring is a required checkpoint — fly through the bright one to clear it.",
       "Cleared rings vanish. The next gate lights up. Skip one and a landing will not count.",
-      "Bank with A / D to turn — the aircraft yaws into the bank on its own.",
-      "Hold back-pressure (W) in a turn or you will lose altitude. Pitch trades speed for height.",
+      "Bank with A / D or the left stick to turn — the aircraft yaws into the bank on its own.",
+      "Hold back-pressure (stick up / W) in a turn or you will lose altitude. Pitch trades speed for height.",
     ],
   },
   {
@@ -57,8 +57,8 @@ const PHASES: Phase[] = [
     summary: "Align with the runway, descend smoothly, and touch down gently.",
     details: [
       "Line up with the runway centreline early — small roll corrections, no sudden banks.",
-      "Reduce throttle with Ctrl to descend; aim for a steady glide path.",
-      "Flare just before touchdown by pulling up gently on W to soften the contact.",
+      "Reduce throttle with Ctrl or the slider to descend; aim for a steady glide path.",
+      "Flare just before touchdown by pulling up gently (stick up / W) to soften the contact.",
       "A hard, fast, crooked, or off-runway arrival crashes the aircraft — the flight is over. Only a clean landing on the destination runway earns a score.",
     ],
   },

@@ -110,9 +110,15 @@ export function ControlsReference() {
     >
       <CardHeader className="border-b border-border/60 bg-secondary/40">
         <div className="flex items-center justify-between gap-3">
-          <CardTitle className="font-display text-lg tracking-tight text-foreground">
-            Controls Reference
-          </CardTitle>
+          <div className="flex flex-col gap-1">
+            <CardTitle className="font-display text-lg tracking-tight text-foreground">
+              Controls Reference
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Keyboard on desktop. On a phone or tablet, use the left stick
+              (pitch / bank), the power slider, and the brake button.
+            </p>
+          </div>
           <Badge
             variant="outline"
             className="hud-label border-primary/40 text-[10px] text-primary"

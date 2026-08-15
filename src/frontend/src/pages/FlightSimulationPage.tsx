@@ -1,5 +1,6 @@
 import { Plane as BackendPlane, Weather as BackendWeather } from "@/backend";
 import { FlightScene } from "@/components/flight/FlightScene";
+import { FlightTouchControls } from "@/components/flight/FlightTouchControls";
 import { HUD } from "@/components/flight/HUD";
 import { ResultsScreen } from "@/components/flight/ResultsScreen";
 import {
@@ -59,7 +60,7 @@ export function FlightSimulationPage() {
   const setPhase = useGameStore((s) => s.setPhase);
   const setScore = useGameStore((s) => s.setScore);
 
-  const { axes, throttlePct, brakesOn, cockpitView, toggleCockpit } =
+  const { axes, touch, throttlePct, brakesOn, cockpitView, toggleCockpit } =
     useFlightControls();
 
   const planId = selectedPlan ? Number(selectedPlan.id) : 1;
@@ -249,7 +250,7 @@ export function FlightSimulationPage() {
   };
 
   return (
-    <div className="relative h-[calc(100svh-7rem)] w-full overflow-hidden rounded-lg border border-border bg-background">
+    <div className="relative h-[calc(100svh-3.25rem-env(safe-area-inset-top))] w-full overflow-hidden bg-background sm:h-[calc(100svh-4rem-env(safe-area-inset-top))] sm:rounded-lg sm:border sm:border-border">
       <FlightScene
         plane={selectedPlane}
         weather={mapWeatherToFrontend(selectedPlan.weather)}
@@ -276,6 +277,15 @@ export function FlightSimulationPage() {
         cockpitView={cockpitView}
         onToggleCockpit={toggleCockpit}
       />
+      {!showResults && phase !== "crashed" && phase !== "complete" && (
+        <FlightTouchControls
+          touch={touch}
+          throttlePct={throttlePct}
+          brakesOn={brakesOn}
+          cockpitView={cockpitView}
+          onToggleCockpit={toggleCockpit}
+        />
+      )}
       {showResults && (
         <ResultsScreen
           score={score}
@@ -308,7 +318,7 @@ function getMissionBrief(
           }
         : {
             objective: "Take off from the departure runway",
-            subObjective: `Hold Shift for power → at ${ROTATE_SPEED_KTS} kt pull up (W) to rotate`,
+            subObjective: `Add power, then at ${ROTATE_SPEED_KTS} kt pull up (stick up / W) to rotate`,
           };
     case "cruising":
       return {
@@ -319,7 +329,7 @@ function getMissionBrief(
     case "landing":
       return {
         objective: `Land on ${landingName}`,
-        subObjective: `Line up heading ${landingHdg.toString().padStart(3, "0")}° · slow to ${APPROACH_SPEED_KTS} kt · flare with W. A bad landing is a crash.`,
+        subObjective: `Line up heading ${landingHdg.toString().padStart(3, "0")}° · slow to ${APPROACH_SPEED_KTS} kt · flare (stick up / W). A bad landing is a crash.`,
       };
     case "crashed":
       return { objective: "Flight over — the aircraft is down" };
@@ -327,7 +337,7 @@ function getMissionBrief(
       return {
         objective: "Complete the landing rollout",
         subObjective:
-          "Hold Space to brake below 20 kt — flight finishes automatically",
+          "Hold brake / Space below 20 kt — flight finishes automatically",
       };
     case "complete":
       return { objective: "Flight complete" };

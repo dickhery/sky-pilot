@@ -26,6 +26,11 @@
 }
 
 @layer base {
+  html,
+  body,
+  #root {
+    min-height: 100svh;
+  }
   :root {
     /* Daytime-flight light variant — cool off-white sky, cyan horizon, amber sun */
     --font-display: "Space Grotesk", sans-serif;
@@ -181,5 +186,14 @@
     font-family: var(--font-mono);
     letter-spacing: 0.12em;
     text-transform: uppercase;
+  }
+  /* On-screen stick: phones, tablets, and coarse pointers */
+  .flight-touch {
+    display: none;
+  }
+  @media (pointer: coarse), (max-width: 768px) {
+    .flight-touch {
+      display: flex;
+    }
   }
 }

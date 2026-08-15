@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * Keyboard control state for the flight simulator.
+ * Keyboard + touch control state for the flight simulator.
  *
  * Axes are smoothed each animation frame so pitch/roll feel less twitchy.
  * Throttle ramps like a real lever; brakes bleed speed on the ground.
@@ -13,8 +13,17 @@ export interface ControlAxes {
   brakes: boolean;
 }
 
+export interface TouchAxes {
+  pitch: number;
+  roll: number;
+  /** Absolute 0–1 while the slider is held; null when idle. */
+  throttle: number | null;
+  brakes: boolean;
+}
+
 export interface FlightControls {
   axes: React.MutableRefObject<ControlAxes>;
+  touch: React.MutableRefObject<TouchAxes>;
   throttlePct: number;
   brakesOn: boolean;
   cockpitView: boolean;
@@ -47,6 +56,12 @@ export function useFlightControls(): FlightControls {
     throttle: 0.25,
     brakes: false,
   });
+  const touch = useRef<TouchAxes>({
+    pitch: 0,
+    roll: 0,
+    throttle: null,
+    brakes: false,
+  });
   const keys = useRef<Set<string>>(new Set());
   const target = useRef({ pitch: 0, roll: 0 });
   const [throttlePct, setThrottlePct] = useState(25);
@@ -56,13 +71,22 @@ export function useFlightControls(): FlightControls {
   useEffect(() => {
     const readTargets = () => {
       const k = keys.current;
-      target.current.pitch =
+      const t = touch.current;
+      target.current.pitch = clamp(
         (k.has("KeyW") || k.has("ArrowUp") ? 1 : 0) +
-        (k.has("KeyS") || k.has("ArrowDown") ? -1 : 0);
-      target.current.roll =
+          (k.has("KeyS") || k.has("ArrowDown") ? -1 : 0) +
+          t.pitch,
+        -1,
+        1,
+      );
+      target.current.roll = clamp(
         (k.has("KeyD") || k.has("ArrowRight") ? 1 : 0) +
-        (k.has("KeyA") || k.has("ArrowLeft") ? -1 : 0);
-      return k.has("Space");
+          (k.has("KeyA") || k.has("ArrowLeft") ? -1 : 0) +
+          t.roll,
+        -1,
+        1,
+      );
+      return k.has("Space") || t.brakes;
     };
 
     let frame = 0;
@@ -80,7 +104,9 @@ export function useFlightControls(): FlightControls {
         keys.current.has("ShiftLeft") || keys.current.has("ShiftRight");
       const targetDown =
         keys.current.has("ControlLeft") || keys.current.has("ControlRight");
-      if (targetUp) a.throttle = Math.min(1, a.throttle + ramp);
+      if (touch.current.throttle != null) {
+        a.throttle += (touch.current.throttle - a.throttle) * 0.18;
+      } else if (targetUp) a.throttle = Math.min(1, a.throttle + ramp);
       else if (targetDown) a.throttle = Math.max(0, a.throttle - ramp);
       if (brakes) a.throttle = Math.max(0, a.throttle - ramp * 2.5);
 
@@ -134,9 +160,14 @@ export function useFlightControls(): FlightControls {
 
   return {
     axes,
+    touch,
     throttlePct,
     brakesOn,
     cockpitView,
     toggleCockpit: () => setCockpitView((v) => !v),
   };
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }

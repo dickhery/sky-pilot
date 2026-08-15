@@ -81,7 +81,7 @@ export function ResultsScreen({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.35 }}
-      className="absolute inset-0 z-30 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"
+      className="absolute inset-0 z-30 flex items-start justify-center overflow-y-auto bg-background/80 p-3 py-6 backdrop-blur-sm sm:items-center sm:p-4"
       data-ocid="flight.results.section"
     >
       <motion.div

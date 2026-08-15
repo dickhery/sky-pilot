@@ -1,6 +1,5 @@
-import { isOnStrip } from "@/components/flight/flightPhysics";
 import type { MapTheme, SceneLayout } from "@/components/flight/mapLayouts";
-import { apronBeside } from "@/components/flight/mapLayouts";
+import { airfieldClearance, apronBeside } from "@/components/flight/mapLayouts";
 import { MeshReflectorMaterial } from "@react-three/drei";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
@@ -44,14 +43,8 @@ function makeGrassTexture(): THREE.CanvasTexture {
   return tex;
 }
 
-const _probe = new THREE.Vector3();
-
 function isRunwayCorridor(layout: SceneLayout, x: number, z: number): boolean {
-  _probe.set(x, 0, z);
-  return (
-    isOnStrip(_probe, layout.departureStart, layout.departureEnd, 22, 20, 20) ||
-    isOnStrip(_probe, layout.landingThreshold, layout.landingEnd, 22, 20, 20)
-  );
+  return airfieldClearance(layout, x, z) > 0.28;
 }
 
 function waterScore(theme: MapTheme, x: number, z: number): number {
@@ -83,7 +76,7 @@ function waterScore(theme: MapTheme, x: number, z: number): number {
 export function Terrain({ layout }: { layout: SceneLayout }) {
   const { geometry, texture } = useMemo(() => {
     const size = 4000;
-    const segments = 96;
+    const segments = 128;
     const geo = new THREE.PlaneGeometry(size, size, segments, segments);
     const pos = geo.attributes.position;
     const colors = new Float32Array(pos.count * 3);
@@ -131,7 +124,7 @@ export function Terrain({ layout }: { layout: SceneLayout }) {
         Math.cos(worldZ * 0.014 + worldX * 0.01) * hillAmp * 0.55 +
         Math.sin(worldX * 0.035) * hillAmp * 0.18;
       const valleyWall =
-        theme === "valley" ? Math.max(0, Math.abs(worldX - 80) - 90) * 0.12 : 0;
+        theme === "valley" ? Math.max(0, Math.abs(worldX - 80) - 140) * 0.1 : 0;
 
       let height = (hill * 0.35 + valleyWall) * (0.5 + rand() * 0.12);
       const wet = waterScore(theme, worldX, worldZ);
@@ -139,8 +132,9 @@ export function Terrain({ layout }: { layout: SceneLayout }) {
         height = THREE.MathUtils.lerp(height, -0.4, wet);
       }
 
-      if (isRunwayCorridor(layout, worldX, worldZ)) {
-        height *= 0.04;
+      const grade = airfieldClearance(layout, worldX, worldZ);
+      if (grade > 0) {
+        height = THREE.MathUtils.lerp(height, 0, grade);
       }
 
       // Displace along the plane normal (local Z). After the mesh is

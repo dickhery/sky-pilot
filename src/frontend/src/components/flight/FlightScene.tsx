@@ -56,6 +56,7 @@ export function FlightScene({
   return (
     <Canvas
       shadows
+      className="touch-none"
       dpr={[1, 1.5]}
       gl={{
         alpha: false,
