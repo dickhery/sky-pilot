@@ -27,14 +27,14 @@ export function FlightTouchControls({
 }: FlightTouchControlsProps) {
   return (
     <div
-      className="flight-touch pointer-events-none absolute inset-x-0 bottom-0 z-30 flex items-end justify-between gap-3 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-8"
+      className="flight-touch pointer-events-none absolute inset-x-0 bottom-0 z-30 flex select-none items-end justify-between gap-3 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-8 [-webkit-tap-highlight-color:transparent]"
       data-ocid="flight.touch.overlay"
     >
       <Stick touch={touch} />
       <div className="pointer-events-auto flex items-end gap-2">
         <button
           type="button"
-          className="hud-label flex h-12 w-12 touch-manipulation items-center justify-center rounded-full border border-primary/40 bg-card/80 text-primary backdrop-blur"
+          className="hud-label flex h-12 w-12 touch-manipulation items-center justify-center rounded-full border border-primary/40 bg-card/80 text-primary backdrop-blur select-none [-webkit-tap-highlight-color:transparent]"
           onClick={onToggleCockpit}
           aria-label={cockpitView ? "Chase camera" : "Cockpit view"}
           data-ocid="flight.touch.view"
@@ -43,7 +43,7 @@ export function FlightTouchControls({
         </button>
         <button
           type="button"
-          className="hud-label flex h-12 w-12 touch-manipulation items-center justify-center rounded-full border border-primary/40 bg-card/80 text-primary backdrop-blur"
+          className="hud-label flex h-12 w-12 touch-manipulation items-center justify-center rounded-full border border-primary/40 bg-card/80 text-primary backdrop-blur select-none [-webkit-tap-highlight-color:transparent]"
           onClick={onToggleMusic}
           aria-label={musicOn ? "Mute music" : "Play music"}
           data-ocid="flight.touch.music"
@@ -56,7 +56,7 @@ export function FlightTouchControls({
         </button>
         <button
           type="button"
-          className={`hud-label flex h-14 min-w-14 touch-manipulation items-center justify-center rounded-full border px-3 text-[10px] backdrop-blur ${
+          className={`hud-label flex h-14 min-w-14 touch-manipulation select-none items-center justify-center rounded-full border px-3 text-[10px] backdrop-blur [-webkit-tap-highlight-color:transparent] ${
             brakesOn
               ? "border-accent bg-accent/30 text-accent"
               : "border-accent/40 bg-card/80 text-accent"
@@ -128,7 +128,7 @@ function Stick({ touch }: { touch: React.MutableRefObject<TouchAxes> }) {
   return (
     <div
       ref={padRef}
-      className="pointer-events-auto relative h-[7.5rem] w-[7.5rem] touch-none rounded-full border border-primary/40 bg-card/55 backdrop-blur"
+      className="pointer-events-auto relative flex h-[7.5rem] w-[7.5rem] touch-none items-center justify-center rounded-full border border-primary/40 bg-card/55 backdrop-blur select-none [-webkit-tap-highlight-color:transparent]"
       onPointerDown={(e) => {
         e.preventDefault();
         dragging.current = true;
@@ -144,10 +144,10 @@ function Stick({ touch }: { touch: React.MutableRefObject<TouchAxes> }) {
       data-ocid="flight.touch.stick"
       aria-label="Flight stick. Drag up to pitch up, left and right to bank."
     >
-      <div className="absolute inset-6 rounded-full border border-primary/20" />
+      <div className="pointer-events-none absolute inset-6 rounded-full border border-primary/20" />
       <div
         ref={knobRef}
-        className="absolute left-1/2 top-1/2 h-11 w-11 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/70 bg-primary/35 shadow-instrument-glow"
+        className="pointer-events-none h-11 w-11 rounded-full border border-primary/70 bg-primary/35 shadow-instrument-glow"
       />
     </div>
   );

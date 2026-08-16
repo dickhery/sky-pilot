@@ -265,7 +265,7 @@ export function FlightSimulationPage() {
   };
 
   return (
-    <div className="relative h-[calc(100svh-3.25rem-env(safe-area-inset-top))] w-full overflow-hidden bg-background sm:h-[calc(100svh-4rem-env(safe-area-inset-top))] sm:rounded-lg sm:border sm:border-border">
+    <div className="relative h-[calc(100svh-3.25rem-env(safe-area-inset-top))] w-full select-none overflow-hidden bg-background [-webkit-tap-highlight-color:transparent] sm:h-[calc(100svh-4rem-env(safe-area-inset-top))] sm:rounded-lg sm:border sm:border-border">
       <FlightScene
         plane={selectedPlane}
         weather={mapWeatherToFrontend(selectedPlan.weather)}
