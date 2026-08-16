@@ -162,17 +162,17 @@ function Runway({
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-5.7, 0.035, 0]}>
         <planeGeometry args={[0.35, length]} />
         <meshStandardMaterial
-          color={isNight ? "#d8c070" : "#e8e4d8"}
-          emissive={isNight ? "#8a7030" : "#000"}
-          emissiveIntensity={isNight ? 0.4 : 0}
+          color={isNight ? "#ffe08a" : "#e8e4d8"}
+          emissive={isNight ? "#ffc44a" : "#000"}
+          emissiveIntensity={isNight ? 1.35 : 0}
         />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[5.7, 0.035, 0]}>
         <planeGeometry args={[0.35, length]} />
         <meshStandardMaterial
-          color={isNight ? "#d8c070" : "#e8e4d8"}
-          emissive={isNight ? "#8a7030" : "#000"}
-          emissiveIntensity={isNight ? 0.4 : 0}
+          color={isNight ? "#ffe08a" : "#e8e4d8"}
+          emissive={isNight ? "#ffc44a" : "#000"}
+          emissiveIntensity={isNight ? 1.35 : 0}
         />
       </mesh>
       {/* Centerline dashes */}
@@ -185,7 +185,8 @@ function Runway({
           <planeGeometry args={[0.28, 4]} />
           <meshStandardMaterial
             color="#f0f0ec"
-            emissive={isNight ? "#555" : "#000"}
+            emissive={isNight ? "#fff4c8" : "#000"}
+            emissiveIntensity={isNight ? 0.9 : 0}
           />
         </mesh>
       ))}
@@ -197,7 +198,11 @@ function Runway({
           position={[x, 0.037, -length / 2 + 8]}
         >
           <planeGeometry args={[0.38, 10]} />
-          <meshStandardMaterial color="#f2f2ee" />
+          <meshStandardMaterial
+            color="#f2f2ee"
+            emissive={isNight ? "#fff6d0" : "#000"}
+            emissiveIntensity={isNight ? 0.85 : 0}
+          />
         </mesh>
       ))}
       {/* Aiming point */}
@@ -208,25 +213,77 @@ function Runway({
             position={[-2.2, 0.037, -length / 2 + 36]}
           >
             <planeGeometry args={[1.6, 8]} />
-            <meshStandardMaterial color="#f2f2ee" />
+            <meshStandardMaterial
+              color="#f2f2ee"
+              emissive={isNight ? "#fff6d0" : "#000"}
+              emissiveIntensity={isNight ? 0.9 : 0}
+            />
           </mesh>
           <mesh
             rotation={[-Math.PI / 2, 0, 0]}
             position={[2.2, 0.037, -length / 2 + 36]}
           >
             <planeGeometry args={[1.6, 8]} />
-            <meshStandardMaterial color="#f2f2ee" />
+            <meshStandardMaterial
+              color="#f2f2ee"
+              emissive={isNight ? "#fff6d0" : "#000"}
+              emissiveIntensity={isNight ? 0.9 : 0}
+            />
           </mesh>
         </>
       )}
+      <RunwayEdgeLamps length={length} night={isNight} />
       {isLanding && (
         <>
-          <ApproachLight x={-4.2} z={-length / 2 + 2} night={isNight} />
-          <ApproachLight x={4.2} z={-length / 2 + 2} night={isNight} />
+          <ApproachLight x={-4.2} z={-length / 2 + 2} night={isNight} lit />
+          <ApproachLight x={4.2} z={-length / 2 + 2} night={isNight} lit />
           <ApproachLight x={-4.2} z={-length / 2 + 14} night={isNight} />
           <ApproachLight x={4.2} z={-length / 2 + 14} night={isNight} />
+          <ApproachLight x={-4.2} z={-length / 2 + 28} night={isNight} />
+          <ApproachLight x={4.2} z={-length / 2 + 28} night={isNight} />
         </>
       )}
+      {isNight && (
+        <pointLight
+          position={[0, 8, 0]}
+          color="#ffe9b8"
+          intensity={2.6}
+          distance={110}
+        />
+      )}
+    </group>
+  );
+}
+
+function RunwayEdgeLamps({
+  length,
+  night,
+}: {
+  length: number;
+  night: boolean;
+}) {
+  const posts = useMemo(() => {
+    const zs: number[] = [];
+    for (let z = -length / 2 + 10; z < length / 2 - 4; z += 26) {
+      zs.push(z);
+    }
+    return zs;
+  }, [length]);
+  if (!night) return null;
+  return (
+    <group>
+      {posts.map((z) => (
+        <group key={`el-${z}`}>
+          <mesh position={[-6.3, 0.22, z]}>
+            <sphereGeometry args={[0.13, 8, 8]} />
+            <meshBasicMaterial color="#ffe7a0" />
+          </mesh>
+          <mesh position={[6.3, 0.22, z]}>
+            <sphereGeometry args={[0.13, 8, 8]} />
+            <meshBasicMaterial color="#ffe7a0" />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 }
@@ -235,10 +292,12 @@ function ApproachLight({
   x,
   z,
   night,
+  lit = false,
 }: {
   x: number;
   z: number;
   night: boolean;
+  lit?: boolean;
 }) {
   return (
     <group position={[x, 0.15, z]}>
@@ -247,10 +306,16 @@ function ApproachLight({
         <meshStandardMaterial color="#2a2a2a" />
       </mesh>
       <mesh position={[0, 0.22, 0]}>
-        <sphereGeometry args={[0.1, 8, 8]} />
+        <sphereGeometry args={[0.12, 8, 8]} />
         <meshBasicMaterial color="#5dff8a" />
       </mesh>
-      <pointLight color="#5dff8a" intensity={night ? 1.8 : 0.6} distance={18} />
+      {lit && (
+        <pointLight
+          color="#7dff9a"
+          intensity={night ? 3.2 : 0.6}
+          distance={36}
+        />
+      )}
     </group>
   );
 }

@@ -97,7 +97,7 @@ export function HUD({
           <NavArrow heading={heading} bearing={nextWaypoint.bearing} />
         )}
         <div
-          className="hud-scanlines glow-instrument flex max-w-full flex-wrap items-center justify-center gap-1.5 rounded-md border border-primary/40 bg-card/80 px-2 py-1 backdrop-blur sm:gap-3 sm:px-4 sm:py-1.5"
+          className="hud-scanlines glow-instrument flex max-w-full flex-wrap items-center justify-center gap-1.5 rounded-md border border-primary/50 bg-black/70 px-2 py-1 backdrop-blur sm:gap-3 sm:px-4 sm:py-1.5"
           data-ocid="flight.hud.mission"
         >
           {MISSION_STEPS.map((step, i) => {
@@ -133,7 +133,7 @@ export function HUD({
         </div>
 
         <div
-          className="hud-scanlines flex max-w-full flex-col items-center gap-0.5 rounded-md border border-accent/40 bg-card/70 px-2 py-1 text-center backdrop-blur sm:px-4 sm:py-1.5"
+          className="hud-scanlines flex max-w-full flex-col items-center gap-0.5 rounded-md border border-accent/50 bg-black/70 px-2 py-1 text-center backdrop-blur sm:px-4 sm:py-1.5"
           data-ocid="flight.hud.objective"
         >
           <div className="flex items-center gap-2">
@@ -231,14 +231,14 @@ export function HUD({
       {/* Top-right: throttle + brakes */}
       <div className="absolute right-2 top-[7.5rem] flex flex-col gap-2 sm:right-4 sm:top-4">
         <div
-          className="hud-scanlines glow-instrument hidden w-40 rounded-md border border-primary/40 bg-card/80 p-2 backdrop-blur md:block"
+          className="hud-scanlines glow-instrument hidden w-40 rounded-md border border-primary/50 bg-black/70 p-2 backdrop-blur md:block"
           data-ocid="flight.hud.throttle"
         >
           <div className="flex items-center justify-between">
             <span className="hud-label text-[10px] text-muted-foreground">
               Throttle
             </span>
-            <span className="hud-label text-xs font-bold text-primary">
+            <span className="hud-label hud-readout text-xs font-bold">
               {throttlePct}%
             </span>
           </div>
@@ -266,7 +266,7 @@ export function HUD({
       {/* Bottom-center: navigation */}
       {nextWaypoint && (
         <div
-          className="hud-scanlines glow-instrument absolute bottom-36 left-1/2 flex w-[min(100%-1rem,24rem)] -translate-x-1/2 items-center justify-center gap-2 rounded-md border border-primary/40 bg-card/80 px-2 py-1.5 backdrop-blur sm:bottom-24 sm:w-auto sm:gap-4 sm:px-4 sm:py-2"
+          className="hud-scanlines glow-instrument absolute bottom-36 left-1/2 flex w-[min(100%-1rem,24rem)] -translate-x-1/2 items-center justify-center gap-2 rounded-md border border-primary/50 bg-black/70 px-2 py-1.5 backdrop-blur sm:bottom-24 sm:w-auto sm:gap-4 sm:px-4 sm:py-2"
           data-ocid="flight.hud.waypoint"
         >
           <div className="flex flex-col">
@@ -277,7 +277,7 @@ export function HUD({
                   ? "Landing Runway"
                   : "Navigate To"}
             </span>
-            <span className="hud-label text-sm font-bold text-primary">
+            <span className="hud-label hud-readout text-sm font-bold">
               {nextWaypoint.name}
             </span>
           </div>
@@ -286,7 +286,7 @@ export function HUD({
             <span className="hud-label text-[9px] text-muted-foreground">
               Distance
             </span>
-            <span className="hud-label text-sm font-bold text-foreground">
+            <span className="hud-label hud-readout text-sm font-bold">
               {Math.max(0, nextWaypoint.distance).toFixed(1)} nm
             </span>
           </div>
@@ -295,7 +295,7 @@ export function HUD({
             <span className="hud-label text-[9px] text-muted-foreground">
               Bearing
             </span>
-            <span className="hud-label text-sm font-bold text-foreground">
+            <span className="hud-label hud-readout text-sm font-bold">
               {Math.round(((nextWaypoint.bearing % 360) + 360) % 360)
                 .toString()
                 .padStart(3, "0")}
@@ -307,7 +307,7 @@ export function HUD({
 
       {/* Bottom-right: controls */}
       <div
-        className="hud-scanlines absolute bottom-4 right-4 hidden rounded-md border border-border bg-card/80 p-3 backdrop-blur md:block"
+        className="hud-scanlines absolute bottom-4 right-4 hidden rounded-md border border-primary/40 bg-black/70 p-3 backdrop-blur md:block"
         data-ocid="flight.hud.controls"
       >
         <div className="mb-1.5 flex items-center gap-1.5">
@@ -395,7 +395,7 @@ function Instrument({
 }) {
   return (
     <div
-      className="hud-scanlines glow-instrument flex w-[6.5rem] items-center gap-1.5 rounded-md border border-primary/40 bg-card/80 px-1.5 py-1 backdrop-blur sm:w-36 sm:gap-2.5 sm:px-2.5 sm:py-1.5"
+      className="hud-scanlines glow-instrument flex w-[6.5rem] items-center gap-1.5 rounded-md border border-primary/50 bg-black/70 px-1.5 py-1 backdrop-blur sm:w-36 sm:gap-2.5 sm:px-2.5 sm:py-1.5"
       data-ocid={dataOcid}
     >
       <span className="text-primary">{icon}</span>
@@ -404,7 +404,7 @@ function Instrument({
           {label}
         </span>
         <span className="flex items-baseline gap-1">
-          <span className="text-base font-bold text-foreground">{value}</span>
+          <span className="hud-readout text-base font-bold">{value}</span>
           {unit && (
             <span className="hud-label text-[9px] text-muted-foreground">
               {unit}

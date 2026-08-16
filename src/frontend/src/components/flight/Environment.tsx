@@ -40,8 +40,8 @@ const PALETTES: Record<Weather, SkyPalette> = {
     horizon: "#1a2a48",
     ground: "#0a1220",
     fog: "#101c36",
-    fogNear: 160,
-    fogFar: 1600,
+    fogNear: 220,
+    fogFar: 2100,
     sun: [-40, 8, -80],
     sunColor: "#d8e4ff",
     sunRadius: 6,
@@ -234,12 +234,12 @@ export function Environment({ weather }: EnvironmentProps) {
 
       {weather === "Nighttime" && (
         <>
-          <ambientLight intensity={0.32} color="#6a82b0" />
-          <hemisphereLight args={["#6d86b8", "#1a2438", 0.48]} />
+          <ambientLight intensity={0.48} color="#7a92c0" />
+          <hemisphereLight args={["#8aa0cc", "#1a2438", 0.62]} />
           <directionalLight
             position={palette.sun}
-            intensity={0.55}
-            color="#c4d4f0"
+            intensity={0.78}
+            color="#d0def4"
           />
         </>
       )}

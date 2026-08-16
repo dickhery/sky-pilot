@@ -71,8 +71,8 @@ export function CockpitInterior({
       <pointLight
         position={[0.1, 0.42, 0.15]}
         color="#ffe8c8"
-        intensity={0.4}
-        distance={2.4}
+        intensity={0.95}
+        distance={2.8}
       />
 
       {/* Floor */}
@@ -232,7 +232,13 @@ function Gauge({
     <group position={[x, y, z]} scale={scale}>
       <mesh>
         <circleGeometry args={[0.08, 24]} />
-        <meshStandardMaterial color={label} roughness={0.4} metalness={0.2} />
+        <meshStandardMaterial
+          color={label}
+          emissive="#2a3840"
+          emissiveIntensity={0.35}
+          roughness={0.4}
+          metalness={0.2}
+        />
       </mesh>
       <mesh position={[0, 0, 0.004]}>
         <ringGeometry args={[0.072, 0.082, 24]} />

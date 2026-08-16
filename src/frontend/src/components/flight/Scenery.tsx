@@ -460,9 +460,21 @@ export function AirportBuildings({
   const apron = apronBeside(layout.departureStart, layout.departureEnd, 48);
   return (
     <group position={[apron.x, 0, apron.z]} rotation={[0, apron.heading, 0]}>
-      <ControlTower />
-      <Hangar position={[-16, 0, 6]} width={16} depth={10} height={5.2} />
-      <Hangar position={[12, 0, 10]} width={11} depth={8} height={4.2} />
+      <ControlTower night={night} />
+      <Hangar
+        position={[-16, 0, 6]}
+        width={16}
+        depth={10}
+        height={5.2}
+        night={night}
+      />
+      <Hangar
+        position={[12, 0, 10]}
+        width={11}
+        depth={8}
+        height={4.2}
+        night={night}
+      />
       <Windsock position={[-2, 0, -8]} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-2, 0.03, 8]}>
         <planeGeometry args={[42, 22]} />
@@ -484,7 +496,13 @@ export function DestinationAirport({
   const apron = apronBeside(layout.landingThreshold, layout.landingEnd, 42);
   return (
     <group position={[apron.x, 0, apron.z]} rotation={[0, apron.heading, 0]}>
-      <Hangar position={[0, 0, 8]} width={12} depth={8} height={4} />
+      <Hangar
+        position={[0, 0, 8]}
+        width={12}
+        depth={8}
+        height={4}
+        night={night}
+      />
       <mesh position={[8, 3.2, -4]} castShadow>
         <boxGeometry args={[2.4, 6.4, 2.4]} />
         <meshStandardMaterial color="#c5cdd6" roughness={0.55} />
@@ -512,32 +530,33 @@ function ApronLights() {
   return (
     <group>
       <pointLight
-        position={[0, 6, 4]}
+        position={[0, 7, 4]}
         color="#ffd9a0"
-        intensity={2.2}
-        distance={40}
+        intensity={3.6}
+        distance={62}
       />
-      <mesh position={[-8, 3.2, 10]}>
-        <boxGeometry args={[0.2, 6.4, 0.2]} />
-        <meshStandardMaterial color="#4a5058" />
-      </mesh>
-      <mesh position={[-8, 6.5, 10]}>
-        <sphereGeometry args={[0.28, 8, 8]} />
-        <meshBasicMaterial color="#ffd080" />
-      </mesh>
-      <mesh position={[8, 3.2, 10]}>
-        <boxGeometry args={[0.2, 6.4, 0.2]} />
-        <meshStandardMaterial color="#4a5058" />
-      </mesh>
-      <mesh position={[8, 6.5, 10]}>
-        <sphereGeometry args={[0.28, 8, 8]} />
-        <meshBasicMaterial color="#ffd080" />
-      </mesh>
+      {[
+        [-8, 10],
+        [8, 10],
+        [-8, -4],
+        [8, -4],
+      ].map(([x, z]) => (
+        <group key={`al-${x}-${z}`}>
+          <mesh position={[x, 3.2, z]}>
+            <boxGeometry args={[0.2, 6.4, 0.2]} />
+            <meshStandardMaterial color="#4a5058" />
+          </mesh>
+          <mesh position={[x, 6.5, z]}>
+            <sphereGeometry args={[0.3, 8, 8]} />
+            <meshBasicMaterial color="#ffd080" />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 }
 
-function ControlTower() {
+function ControlTower({ night = false }: { night?: boolean }) {
   return (
     <group>
       <mesh position={[0, 3.4, 0]} castShadow>
@@ -555,7 +574,7 @@ function ControlTower() {
           <meshStandardMaterial
             color="#9fd4f0"
             emissive="#7ec8e8"
-            emissiveIntensity={0.7}
+            emissiveIntensity={night ? 1.6 : 0.7}
             metalness={0.4}
             roughness={0.2}
             transparent
@@ -575,6 +594,8 @@ function ControlTower() {
         <boxGeometry args={[3.8, 1.5, 3.8]} />
         <meshStandardMaterial
           color="#7eb0c8"
+          emissive={night ? "#9ad4ee" : "#000"}
+          emissiveIntensity={night ? 0.85 : 0}
           metalness={0.55}
           roughness={0.12}
           transparent
@@ -590,9 +611,17 @@ function ControlTower() {
         <meshStandardMaterial color="#889098" metalness={0.5} />
       </mesh>
       <mesh position={[0, 11.25, 0]}>
-        <sphereGeometry args={[0.12, 8, 8]} />
+        <sphereGeometry args={[0.14, 8, 8]} />
         <meshBasicMaterial color="#e24a3a" />
       </mesh>
+      {night && (
+        <pointLight
+          position={[0, 8.2, 0]}
+          color="#ffd9a8"
+          intensity={2.4}
+          distance={36}
+        />
+      )}
     </group>
   );
 }
@@ -602,11 +631,13 @@ function Hangar({
   width,
   depth,
   height,
+  night = false,
 }: {
   position: [number, number, number];
   width: number;
   depth: number;
   height: number;
+  night?: boolean;
 }) {
   return (
     <group position={position}>
@@ -645,8 +676,19 @@ function Hangar({
       {/* Door recess */}
       <mesh position={[0, height * 0.32, depth * 0.51]}>
         <boxGeometry args={[width * 0.72, height * 0.62, 0.08]} />
-        <meshStandardMaterial color="#3d444c" roughness={0.7} />
+        <meshStandardMaterial
+          color="#3d444c"
+          emissive={night ? "#c9a050" : "#000"}
+          emissiveIntensity={night ? 0.55 : 0}
+          roughness={0.7}
+        />
       </mesh>
+      {night && (
+        <mesh position={[0, height * 0.78, depth * 0.52]}>
+          <boxGeometry args={[width * 0.5, 0.12, 0.1]} />
+          <meshBasicMaterial color="#ffd080" />
+        </mesh>
+      )}
     </group>
   );
 }
@@ -714,13 +756,21 @@ export function MapLandmarks({
           <boxGeometry args={[4, 6, 4]} />
           <meshBasicMaterial color={night ? "#ffd36a" : "#d8c070"} />
         </mesh>
+        {night && (
+          <pointLight
+            position={[wp.x, 40, wp.z]}
+            color="#ffd080"
+            intensity={2.8}
+            distance={90}
+          />
+        )}
         {towers.map((t) => (
           <mesh key={`${t.x}-${t.z}`} position={[t.x, t.h / 2, t.z]} castShadow>
             <boxGeometry args={[t.w, t.h, t.w]} />
             <meshStandardMaterial
               color="#4a5568"
-              emissive={night ? "#3a4a20" : "#000"}
-              emissiveIntensity={night ? 0.25 : 0}
+              emissive={night ? "#6a7a30" : "#000"}
+              emissiveIntensity={night ? 0.7 : 0}
               roughness={0.6}
             />
           </mesh>
