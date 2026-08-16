@@ -161,7 +161,9 @@ export function ResultsScreen({
               <span className="hud-label text-primary">
                 {crashed
                   ? "Crash not logged — no score earned"
-                  : "Logged to flight logbook"}
+                  : isAuthenticated
+                    ? "Logged to flight logbook"
+                    : "Sign in to keep this flight in your logbook"}
               </span>
             </>
           ) : (

@@ -25,6 +25,7 @@ import { useFlightControls } from "@/hooks/useFlightControls";
 import { useRecordFlightLog } from "@/hooks/useFlightData";
 import { useGameStore } from "@/store/gameStore";
 import type { FlightPhase, ScoreBreakdown, Weather } from "@/types/game";
+import { useInternetIdentity } from "@caffeineai/core-infrastructure";
 import { useNavigate } from "@tanstack/react-router";
 import { Plane as PlaneIcon, Rocket } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -117,6 +118,7 @@ export function FlightSimulationPage() {
   const [finalDuration, setFinalDuration] = useState(0);
 
   const recordMutation = useRecordFlightLog();
+  const { isAuthenticated } = useInternetIdentity();
 
   // Phase change handler passed into the scene.
   const handlePhaseChange = useCallback(
@@ -181,6 +183,12 @@ export function FlightSimulationPage() {
       return;
     }
 
+    // Anonymous writes used to share one logbook and grow canister memory.
+    if (!isAuthenticated) {
+      setPersisted(true);
+      return;
+    }
+
     recordMutation.mutate(
       {
         completedAt: BigInt(Date.now()),
@@ -209,6 +217,7 @@ export function FlightSimulationPage() {
     selectedPlan,
     setScore,
     recordMutation,
+    isAuthenticated,
   ]);
 
   // No plan/plane selected — bounce to flight plans.

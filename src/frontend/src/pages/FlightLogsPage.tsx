@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFlightLogs } from "@/hooks/useFlightData";
+import { useInternetIdentity } from "@caffeineai/core-infrastructure";
 import { useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
   BookOpen,
   Compass,
+  LogIn,
   PlaneTakeoff,
   RefreshCw,
 } from "lucide-react";
@@ -21,10 +23,12 @@ import { motion } from "motion/react";
 export function FlightLogsPage() {
   const { data, isLoading, isError, error, refetch, isFetching } =
     useFlightLogs();
+  const { isAuthenticated, login, isLoggingIn } = useInternetIdentity();
   const navigate = useNavigate();
 
   const logs = data ?? [];
-  const showSkeletons = isLoading || (isFetching && logs.length === 0);
+  const showSkeletons =
+    isAuthenticated && (isLoading || (isFetching && logs.length === 0));
 
   return (
     <motion.section
@@ -51,8 +55,40 @@ export function FlightLogsPage() {
         </p>
       </header>
 
+      {!isAuthenticated && (
+        <Card
+          className="hud-scanlines border-primary/30 bg-card/60"
+          data-ocid="flight-logs.sign_in_state"
+        >
+          <CardContent className="flex flex-col items-center gap-5 py-12 text-center">
+            <div className="glow-instrument flex size-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <LogIn className="size-8" aria-hidden="true" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="font-display text-xl font-semibold text-foreground">
+                Sign in to open your logbook
+              </h2>
+              <p className="mx-auto max-w-sm text-sm text-muted-foreground">
+                Flight logs are stored per Internet Identity so the canister
+                does not grow a shared anonymous book.
+              </p>
+            </div>
+            <Button
+              variant="default"
+              size="lg"
+              onClick={() => login()}
+              disabled={isLoggingIn}
+              data-ocid="flight-logs.sign_in_button"
+            >
+              <LogIn className="size-4" aria-hidden="true" />
+              {isLoggingIn ? "Opening Internet Identity…" : "Sign in"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Error state */}
-      {isError && !showSkeletons && (
+      {isAuthenticated && isError && !showSkeletons && (
         <Card
           className="glow-caution border-destructive/40 bg-destructive/5"
           data-ocid="flight-logs.error_state"
@@ -85,7 +121,7 @@ export function FlightLogsPage() {
       )}
 
       {/* Loading state */}
-      {showSkeletons && !isError && (
+      {isAuthenticated && showSkeletons && !isError && (
         <div
           className="flex flex-col gap-4"
           data-ocid="flight-logs.loading_state"
@@ -118,7 +154,7 @@ export function FlightLogsPage() {
       )}
 
       {/* Empty state */}
-      {!showSkeletons && !isError && logs.length === 0 && (
+      {isAuthenticated && !showSkeletons && !isError && logs.length === 0 && (
         <Card
           className="hud-scanlines border-primary/30 bg-card/60"
           data-ocid="flight-logs.empty_state"
@@ -150,7 +186,7 @@ export function FlightLogsPage() {
       )}
 
       {/* Log list */}
-      {!showSkeletons && !isError && logs.length > 0 && (
+      {isAuthenticated && !showSkeletons && !isError && logs.length > 0 && (
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <span className="hud-label text-[10px] text-muted-foreground">

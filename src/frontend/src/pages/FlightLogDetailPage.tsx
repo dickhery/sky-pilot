@@ -5,12 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useFlightLog } from "@/hooks/useFlightData";
+import { useInternetIdentity } from "@caffeineai/core-infrastructure";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Calendar,
   Clock,
   Gauge,
+  LogIn,
   MapPin,
   Navigation,
   Plane as PlaneIcon,
@@ -112,6 +114,7 @@ function ScoreRow({
 export function FlightLogDetailPage() {
   const { logId } = useParams({ from: "/flight-logs/$logId" });
   const navigate = useNavigate();
+  const { isAuthenticated, login, isLoggingIn } = useInternetIdentity();
 
   // Route param is a string; the backend expects a bigint LogId.
   const parsedLogId = (() => {
@@ -151,8 +154,38 @@ export function FlightLogDetailPage() {
         </Button>
       </div>
 
+      {!isAuthenticated && (
+        <Card
+          className="hud-scanlines border-primary/30 bg-card/60"
+          data-ocid="flight-log-detail.sign_in_state"
+        >
+          <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
+            <div className="glow-instrument flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <LogIn className="size-6" aria-hidden="true" />
+            </div>
+            <div className="space-y-1">
+              <p className="font-display text-lg font-semibold text-foreground">
+                Sign in to view this log
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Logbook entries are private to your Internet Identity.
+              </p>
+            </div>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => login()}
+              disabled={isLoggingIn}
+              data-ocid="flight-log-detail.sign_in_button"
+            >
+              {isLoggingIn ? "Opening Internet Identity…" : "Sign in"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Loading */}
-      {isLoading && (
+      {isAuthenticated && isLoading && (
         <div
           className="flex flex-col gap-4"
           data-ocid="flight-log-detail.loading_state"
@@ -183,7 +216,7 @@ export function FlightLogDetailPage() {
       )}
 
       {/* Error */}
-      {isError && !isLoading && (
+      {isAuthenticated && isError && !isLoading && (
         <Card
           className="glow-caution border-destructive/40 bg-destructive/5"
           data-ocid="flight-log-detail.error_state"
@@ -225,7 +258,7 @@ export function FlightLogDetailPage() {
       )}
 
       {/* Not found / invalid id */}
-      {!isLoading && !isError && !log && (
+      {isAuthenticated && !isLoading && !isError && !log && (
         <Card
           className="border-border/70 bg-card/60"
           data-ocid="flight-log-detail.empty_state"
@@ -255,7 +288,7 @@ export function FlightLogDetailPage() {
       )}
 
       {/* Detail content */}
-      {!isLoading && !isError && log && (
+      {isAuthenticated && !isLoading && !isError && log && (
         <>
           {/* Header card */}
           <Card

@@ -9,7 +9,7 @@ import type {
   SubmitOutcome,
   Weather,
 } from "@/backend";
-import { useActor } from "@caffeineai/core-infrastructure";
+import { useActor, useInternetIdentity } from "@caffeineai/core-infrastructure";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 /**
@@ -28,7 +28,8 @@ export function useFlightPlans() {
       return actor.listFlightPlans();
     },
     enabled: !!actor && !isFetching,
-    staleTime: 60_000,
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: Number.POSITIVE_INFINITY,
   });
 }
 
@@ -37,14 +38,15 @@ export function useFlightPlans() {
  */
 export function useFlightLogs() {
   const { actor, isFetching } = useActor(createActor);
+  const { isAuthenticated } = useInternetIdentity();
   return useQuery<FlightLogView[]>({
     queryKey: ["flight-logs"],
     queryFn: async () => {
       if (!actor) return [];
       return actor.listFlightLogs();
     },
-    enabled: !!actor && !isFetching,
-    staleTime: 30_000,
+    enabled: !!actor && !isFetching && isAuthenticated,
+    staleTime: 60_000,
   });
 }
 
@@ -53,14 +55,15 @@ export function useFlightLogs() {
  */
 export function useFlightLog(logId: LogId | undefined) {
   const { actor, isFetching } = useActor(createActor);
+  const { isAuthenticated } = useInternetIdentity();
   return useQuery<FlightLogView | null>({
     queryKey: ["flight-log", logId?.toString()],
     queryFn: async () => {
       if (!actor || logId === undefined) return null;
       return actor.getFlightLog(logId);
     },
-    enabled: !!actor && !isFetching && logId !== undefined,
-    staleTime: 30_000,
+    enabled: !!actor && !isFetching && isAuthenticated && logId !== undefined,
+    staleTime: 60_000,
   });
 }
 
@@ -107,7 +110,7 @@ export function useLeaderboard() {
       return actor.listLeaderboard();
     },
     enabled: !!actor && !isFetching,
-    staleTime: 20_000,
+    staleTime: 60_000,
   });
 }
 

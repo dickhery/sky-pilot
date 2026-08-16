@@ -59,7 +59,7 @@ export function useFlightAudio(
   useEffect(() => {
     const el = new Audio();
     el.loop = true;
-    el.preload = "auto";
+    el.preload = "none";
     el.volume = 0;
     el.setAttribute("playsinline", "true");
     music.current = el;
@@ -80,18 +80,24 @@ export function useFlightAudio(
       if (!elNow) return;
       const opts = optionsRef.current;
       const src = TRACKS[opts.planId] ?? TRACKS[1];
-      const want = src && !opts.musicMuted;
+      const want = Boolean(src) && !opts.musicMuted;
+      // Do not fetch a soundtrack from the asset canister until music is on.
+      if (!want) {
+        if (elNow.dataset.track) {
+          elNow.pause();
+          elNow.removeAttribute("src");
+          elNow.load();
+          delete elNow.dataset.track;
+        }
+        elNow.volume = 0;
+        return;
+      }
       if (elNow.dataset.track !== src) {
         elNow.pause();
         elNow.src = src;
         elNow.dataset.track = src;
         elNow.volume = 0;
         elNow.load();
-      }
-      if (!want) {
-        elNow.pause();
-        elNow.volume = 0;
-        return;
       }
       if (!unlocked.current) return;
       if (elNow.paused) {

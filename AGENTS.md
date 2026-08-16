@@ -25,4 +25,14 @@
 
 ## Learnings
 
-[No learnings yet]
+- Keep Caffeine import surface intact (`MixinViews`, `MixinAuthorization`, workspace `caffeine.toml`). Cap user-controlled canister memory and reject anonymous writes in `inspect` plus the method body. Do not fetch soundtrack files from the asset canister until music is unmuted. Frontend Vite builds should minify.
+
+<!-- ic-skills:managed:start -->
+<!-- state: configured (on-demand) -->
+Fetch the skills index once per session and keep each skill's name, description,
+and SKILL.md URL:
+https://skills.internetcomputer.org/.well-known/skills/index.json
+Before writing ICP code for a task, fetch the matching skill's SKILL.md
+(https://skills.internetcomputer.org/.well-known/skills/{name}/SKILL.md) and follow
+it. Skills are authoritative — prefer them over general knowledge.
+<!-- ic-skills:managed:end -->
