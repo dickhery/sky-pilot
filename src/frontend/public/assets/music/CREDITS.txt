@@ -1,25 +1,15 @@
-Sky Pilot route soundtracks — all Creative Commons Zero (public domain).
+Sky Pilot route soundtracks.
 
-1. Morning Coastal Hop
-   "Heavenly Loop" — isaiah658
-   https://opengameart.org/content/heavenly-loop
+Created with Suno AI. Used as in-flight music for each weather pair.
 
-2. Midday Crosswind Run
-   "Get Ready" — Komiku / Loyalty Freak Music
-   https://opengameart.org/content/get-ready
+Daytime
+  Morning Coastal Hop  — Protocol_Runway_Daytime.mp3
+  Midday Crosswind Run — Protocol_Runway_Daytime_2.mp3
 
-3. Midnight Harbor Approach
-   "Night Escape" — Agecaf
-   https://opengameart.org/content/night-escape
+Nighttime
+  Midnight Harbor Approach — Night_Flight_Protocol.mp3
+  Night Express            — Fly_All_Night.mp3
 
-4. Night Express
-   "Scifi City - Ambient Loop" (busy_cyberworld) — TinyWorlds
-   https://opengameart.org/content/scifi-city-ambient-loop
-
-5. Cloudy Valley Tour
-   "Mysterious Ambience (song21)" — cynicmusic / pixelsphere.org
-   https://opengameart.org/content/mysterious-ambience-song21
-
-6. Storm Front Sprint
-   "Sirens in Darkness" — The Cynic Project / cynicmusic.com / pixelsphere.org
-   https://opengameart.org/content/sirens-in-darkness
+Partly cloudy
+  Cloudy Valley Tour — Rainy_Sky_Protocol_1.mp3
+  Storm Front Sprint — Rainy_Sky_Protocol_2.mp3

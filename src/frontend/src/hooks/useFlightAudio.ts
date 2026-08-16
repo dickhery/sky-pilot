@@ -7,20 +7,21 @@ export interface FlightAudioOptions {
   engineMuted: boolean;
   /** Pause the route soundtrack. */
   musicMuted: boolean;
-  /** Flight-plan id 1–6 picks a distinct CC0 track. */
+  /** Flight-plan id 1–6 picks a distinct soundtrack. */
   planId: number;
 }
 
 const MUSIC_PREF_KEY = "sky-pilot-music";
-const MUSIC_VOLUME = 0.46;
+/** Suno masters are loud — keep them under the engine rumble. */
+const MUSIC_VOLUME = 0.32;
 
 const TRACKS: Record<number, string> = {
-  1: "/assets/music/coast.m4a",
-  2: "/assets/music/ridge.m4a",
-  3: "/assets/music/harbor.m4a",
-  4: "/assets/music/city.m4a",
-  5: "/assets/music/valley.m4a",
-  6: "/assets/music/storm.m4a",
+  1: "/assets/music/Protocol_Runway_Daytime.mp3",
+  2: "/assets/music/Protocol_Runway_Daytime_2.mp3",
+  3: "/assets/music/Night_Flight_Protocol.mp3",
+  4: "/assets/music/Fly_All_Night.mp3",
+  5: "/assets/music/Rainy_Sky_Protocol_1.mp3",
+  6: "/assets/music/Rainy_Sky_Protocol_2.mp3",
 };
 
 export function readMusicPref(): boolean {
@@ -40,8 +41,8 @@ export function writeMusicPref(on: boolean): void {
 }
 
 /**
- * Engine rumble is still synthesized (tiny). Route music is real CC0
- * loops in /assets/music so it is actually audible in-flight.
+ * Engine rumble is synthesized. Route music is the Suno soundtracks
+ * in /assets/music, one per flight plan / weather pair.
  */
 export function useFlightAudio(
   flightState: React.MutableRefObject<FlightState>,
@@ -59,7 +60,7 @@ export function useFlightAudio(
     const el = new Audio();
     el.loop = true;
     el.preload = "auto";
-    el.volume = MUSIC_VOLUME;
+    el.volume = 0;
     el.setAttribute("playsinline", "true");
     music.current = el;
 
@@ -81,17 +82,25 @@ export function useFlightAudio(
       const src = TRACKS[opts.planId] ?? TRACKS[1];
       const want = src && !opts.musicMuted;
       if (elNow.dataset.track !== src) {
+        elNow.pause();
         elNow.src = src;
         elNow.dataset.track = src;
+        elNow.volume = 0;
         elNow.load();
       }
       if (!want) {
         elNow.pause();
+        elNow.volume = 0;
         return;
       }
       if (!unlocked.current) return;
-      const play = elNow.play();
-      if (play) void play.catch(() => {});
+      if (elNow.paused) {
+        const play = elNow.play();
+        if (play) void play.catch(() => {});
+      }
+      if (elNow.volume < MUSIC_VOLUME - 0.01) {
+        elNow.volume = Math.min(MUSIC_VOLUME, elNow.volume + 0.018);
+      }
     };
 
     const onGesture = () => unlock();
